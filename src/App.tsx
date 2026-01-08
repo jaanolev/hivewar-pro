@@ -9,6 +9,7 @@ import PropertyPanel from './components/Panel/PropertyPanel';
 import ExportModal from './components/Modals/ExportModal';
 import MenuModal from './components/Modals/MenuModal';
 import TemplatesModal from './components/Modals/TemplatesModal';
+import HelpModal from './components/Modals/HelpModal';
 import './App.css';
 
 export default function App() {
@@ -41,6 +42,7 @@ export default function App() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showMenuModal, setShowMenuModal] = useState(false);
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
   
   // Pro status (would come from auth in production)
   const [isPro] = useState(false);
@@ -214,6 +216,21 @@ export default function App() {
           isPro={isPro}
         />
       )}
+
+      {/* Help Modal */}
+      <HelpModal
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+      />
+
+      {/* Help Button (floating) */}
+      <button 
+        className="help-fab"
+        onClick={() => setShowHelpModal(true)}
+        title="Help & User Guide"
+      >
+        ❓
+      </button>
 
       {/* Mobile tip */}
       <div className="mobile-tip">
