@@ -1,0 +1,351 @@
+.upgrade-modal {
+  max-width: 420px;
+  overflow: hidden;
+}
+
+.upgrade-content {
+  padding: 20px;
+}
+
+/* Pricing Card */
+.pricing-card {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+}
+
+.pricing-header {
+  margin-bottom: 20px;
+}
+
+.pricing-badge {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  display: inline-block;
+  margin-bottom: 12px;
+  letter-spacing: 0.5px;
+}
+
+.pricing-header h3 {
+  margin: 0 0 8px 0;
+  color: var(--text-primary);
+  font-size: 22px;
+}
+
+.pricing-amount {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+}
+
+.pricing-amount .price {
+  font-size: 42px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.pricing-amount .period {
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+.pricing-features {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.pricing-features li {
+  padding: 8px 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.pricing-features li:last-child {
+  border-bottom: none;
+}
+
+.pricing-features li.coming-soon {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.subscribe-btn {
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 8px;
+}
+
+.subscribe-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.pricing-note {
+  margin: 12px 0 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* Divider */
+.upgrade-divider {
+  display: flex;
+  align-items: center;
+  margin: 24px 0;
+}
+
+.upgrade-divider::before,
+.upgrade-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+
+.upgrade-divider span {
+  padding: 0 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* Code Section */
+.code-section {
+  text-align: center;
+}
+
+.have-code-btn {
+  background: transparent;
+  border: 1px dashed var(--border-color);
+  color: var(--text-secondary);
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.have-code-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.code-form {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.code-form h4 {
+  margin: 0 0 16px 0;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.code-input {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  margin-bottom: 12px;
+  text-align: center;
+  font-family: 'Monaco', 'Consolas', monospace;
+  letter-spacing: 1px;
+}
+
+.code-input::placeholder {
+  color: var(--text-muted);
+  letter-spacing: normal;
+  font-family: inherit;
+}
+
+.code-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.activate-btn {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 8px;
+}
+
+.activate-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.activate-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cancel-code-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 8px;
+}
+
+.cancel-code-btn:hover {
+  color: var(--text-secondary);
+}
+
+/* Message */
+.upgrade-message {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.upgrade-message.success {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.upgrade-message.error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Pro Status Section */
+.pro-status-section {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.pro-badge-large {
+  display: inline-block;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  font-size: 24px;
+  font-weight: 700;
+  padding: 12px 32px;
+  border-radius: 30px;
+  margin-bottom: 16px;
+}
+
+.pro-status-section h3 {
+  margin: 0 0 8px 0;
+  color: var(--text-primary);
+}
+
+.pro-email {
+  color: var(--accent-primary);
+  font-size: 14px;
+  margin: 0 0 4px 0;
+}
+
+.pro-date {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin: 0 0 24px 0;
+}
+
+.pro-features-active {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.pro-features-active h4 {
+  margin: 0 0 12px 0;
+  color: #10b981;
+  font-size: 14px;
+}
+
+.pro-features-active ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pro-features-active li {
+  padding: 6px 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.deactivate-btn {
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.deactivate-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Footer */
+.upgrade-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+}
+
+.upgrade-footer p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .upgrade-modal {
+    max-width: 100%;
+    margin: 10px;
+  }
+
+  .pricing-amount .price {
+    font-size: 36px;
+  }
+
+  .pricing-card {
+    padding: 20px 16px;
+  }
+}
+

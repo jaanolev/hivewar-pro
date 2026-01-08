@@ -16,10 +16,11 @@ interface ExportModalProps {
   plan: HivePlan;
   stageRef: React.RefObject<any>;
   onClose: () => void;
+  onUpgrade: () => void;
   isPro?: boolean;
 }
 
-export default function ExportModal({ plan, stageRef, onClose, isPro = false }: ExportModalProps) {
+export default function ExportModal({ plan, stageRef, onClose, onUpgrade, isPro = false }: ExportModalProps) {
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [originX, setOriginX] = useState(plan.originX || 100);
@@ -101,7 +102,9 @@ export default function ExportModal({ plan, stageRef, onClose, isPro = false }: 
                   ? `${remainingExports} free exports remaining this month`
                   : 'Export limit reached!'}
               </span>
-              <button className="upgrade-small-btn">Go Pro</button>
+              <button className="upgrade-small-btn" onClick={() => { onClose(); onUpgrade(); }}>
+                Go Pro →
+              </button>
             </div>
           )}
 

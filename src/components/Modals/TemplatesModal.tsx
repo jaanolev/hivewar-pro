@@ -7,12 +7,14 @@ import './TemplatesModal.css';
 interface TemplatesModalProps {
   onApplyTemplate: (buildings: HiveTemplate['buildings']) => void;
   onClose: () => void;
+  onUpgrade: () => void;
   isPro?: boolean;
 }
 
 export default function TemplatesModal({
   onApplyTemplate,
   onClose,
+  onUpgrade,
   isPro = false
 }: TemplatesModalProps) {
   const [activeCategory, setActiveCategory] = useState<string>('defense');
@@ -22,7 +24,8 @@ export default function TemplatesModal({
 
   const handleApply = (template: HiveTemplate) => {
     if (template.isPro && !isPro) {
-      alert('This template requires Pro! Upgrade to unlock all templates.');
+      onClose();
+      onUpgrade();
       return;
     }
     
@@ -144,7 +147,9 @@ export default function TemplatesModal({
                 <strong>Unlock All Templates</strong>
                 <p>Get Pro for exclusive seasonal layouts and community picks!</p>
               </div>
-              <button className="upgrade-btn">Upgrade $4.99/mo</button>
+              <button className="upgrade-btn" onClick={() => { onClose(); onUpgrade(); }}>
+                Upgrade €4.99/mo →
+              </button>
             </div>
           )}
         </div>

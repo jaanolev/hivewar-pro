@@ -10,6 +10,8 @@ import ExportModal from './components/Modals/ExportModal';
 import MenuModal from './components/Modals/MenuModal';
 import TemplatesModal from './components/Modals/TemplatesModal';
 import HelpModal from './components/Modals/HelpModal';
+import UpgradeModal from './components/Modals/UpgradeModal';
+import { getProStatus } from './utils/pro';
 import './App.css';
 
 export default function App() {
@@ -43,9 +45,10 @@ export default function App() {
   const [showMenuModal, setShowMenuModal] = useState(false);
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   
-  // Pro status (would come from auth in production)
-  const [isPro] = useState(false);
+  // Pro status - read from localStorage
+  const [isPro, setIsPro] = useState(() => getProStatus().isPro);
 
   // Get selected building for property panel
   const selectedBuilding = currentPlan?.buildings.find(
@@ -190,6 +193,7 @@ export default function App() {
           plan={currentPlan}
           stageRef={stageRef}
           onClose={() => setShowExportModal(false)}
+          onUpgrade={() => setShowUpgradeModal(true)}
           isPro={isPro}
         />
       )}
@@ -213,6 +217,7 @@ export default function App() {
         <TemplatesModal
           onApplyTemplate={handleApplyTemplate}
           onClose={() => setShowTemplatesModal(false)}
+          onUpgrade={() => setShowUpgradeModal(true)}
           isPro={isPro}
         />
       )}
@@ -223,14 +228,43 @@ export default function App() {
         onClose={() => setShowHelpModal(false)}
       />
 
-      {/* Help Button (floating) */}
-      <button 
-        className="help-fab"
-        onClick={() => setShowHelpModal(true)}
-        title="Help & User Guide"
-      >
-        ❓
-      </button>
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        onProStatusChange={setIsPro}
+      />
+
+      {/* Floating Buttons */}
+      <div className="floating-buttons">
+        {/* Pro Badge or Upgrade Button */}
+        {isPro ? (
+          <button 
+            className="pro-fab"
+            onClick={() => setShowUpgradeModal(true)}
+            title="Pro Member"
+          >
+            👑
+          </button>
+        ) : (
+          <button 
+            className="upgrade-fab"
+            onClick={() => setShowUpgradeModal(true)}
+            title="Upgrade to Pro"
+          >
+            ⭐
+          </button>
+        )}
+        
+        {/* Help Button */}
+        <button 
+          className="help-fab"
+          onClick={() => setShowHelpModal(true)}
+          title="Help & User Guide"
+        >
+          ❓
+        </button>
+      </div>
 
       {/* Mobile tip */}
       <div className="mobile-tip">
