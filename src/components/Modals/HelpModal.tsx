@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { trackEvent } from '../../utils/analytics';
 import './Modal.css';
 import './HelpModal.css';
 
@@ -7,12 +8,46 @@ interface HelpModalProps {
   onClose: () => void;
 }
 
-type HelpSection = 'getting-started' | 'interface' | 'guides' | 'faq' | 'tips';
+type HelpSection = 'getting-started' | 'interface' | 'guides' | 'faq' | 'tips' | 'contact';
 
 export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
   const [activeSection, setActiveSection] = useState<HelpSection>('getting-started');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const [contactType, setContactType] = useState<'feedback' | 'bug' | 'feature' | 'question'>('feedback');
+  const [messageSent, setMessageSent] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   if (!isOpen) return null;
+
+  const handleSendMessage = async () => {
+    if (!contactMessage.trim()) return;
+    
+    setIsSending(true);
+    
+    // Store message locally
+    const messages = JSON.parse(localStorage.getItem('hivewar_messages') || '[]');
+    const newMessage = {
+      id: Date.now(),
+      email: contactEmail || 'anonymous',
+      type: contactType,
+      message: contactMessage,
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      url: window.location.href
+    };
+    messages.push(newMessage);
+    localStorage.setItem('hivewar_messages', JSON.stringify(messages));
+    
+    // Track event
+    trackEvent('message_sent', { type: contactType, hasEmail: !!contactEmail });
+    
+    // Simulate sending
+    await new Promise(resolve => setTimeout(resolve, 600));
+    
+    setMessageSent(true);
+    setIsSending(false);
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -54,6 +89,12 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
               onClick={() => setActiveSection('tips')}
             >
               💡 Tips
+            </button>
+            <button 
+              className={`help-tab ${activeSection === 'contact' ? 'active' : ''}`}
+              onClick={() => setActiveSection('contact')}
+            >
+              ✉️ Contact
             </button>
           </div>
 
@@ -263,6 +304,97 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                       <tr><td><code>Escape</code></td><td>Deselect / Close modal</td></tr>
                     </tbody>
                   </table>
+                </div>
+              </div>
+            )}
+
+            {activeSection === 'contact' && (
+              <div className="help-section">
+                <h3>✉️ Contact Us</h3>
+                <p className="help-intro">
+                  Have feedback, found a bug, or need help? We'd love to hear from you!
+                </p>
+
+                {!messageSent ? (
+                  <div className="contact-form">
+                    <div className="contact-type-selector">
+                      <button 
+                        className={`type-btn ${contactType === 'feedback' ? 'active' : ''}`}
+                        onClick={() => setContactType('feedback')}
+                      >
+                        💬 Feedback
+                      </button>
+                      <button 
+                        className={`type-btn ${contactType === 'bug' ? 'active' : ''}`}
+                        onClick={() => setContactType('bug')}
+                      >
+                        🐛 Bug Report
+                      </button>
+                      <button 
+                        className={`type-btn ${contactType === 'feature' ? 'active' : ''}`}
+                        onClick={() => setContactType('feature')}
+                      >
+                        ✨ Feature Request
+                      </button>
+                      <button 
+                        className={`type-btn ${contactType === 'question' ? 'active' : ''}`}
+                        onClick={() => setContactType('question')}
+                      >
+                        ❓ Question
+                      </button>
+                    </div>
+
+                    <input
+                      type="email"
+                      placeholder="Your email (optional, for reply)"
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      className="contact-input"
+                    />
+
+                    <textarea
+                      placeholder="Write your message here..."
+                      value={contactMessage}
+                      onChange={(e) => setContactMessage(e.target.value)}
+                      className="contact-textarea"
+                      rows={5}
+                    />
+
+                    <button 
+                      className="send-message-btn"
+                      onClick={handleSendMessage}
+                      disabled={isSending || !contactMessage.trim()}
+                    >
+                      {isSending ? 'Sending...' : '📤 Send Message'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="message-sent-success">
+                    <div className="success-icon">✅</div>
+                    <h4>Message Sent!</h4>
+                    <p>Thank you for reaching out. We read every message!</p>
+                    {contactEmail && (
+                      <p className="reply-note">We'll reply to <strong>{contactEmail}</strong> if needed.</p>
+                    )}
+                    <button 
+                      className="send-another-btn"
+                      onClick={() => {
+                        setMessageSent(false);
+                        setContactMessage('');
+                      }}
+                    >
+                      Send Another Message
+                    </button>
+                  </div>
+                )}
+
+                <div className="help-card contact-info-card">
+                  <h4>Other Ways to Reach Us</h4>
+                  <ul>
+                    <li>💬 <strong>Discord:</strong> Join our community server</li>
+                    <li>📧 <strong>Email:</strong> support@hivewar.pro</li>
+                    <li>🐦 <strong>Twitter/X:</strong> @HiveWarPro</li>
+                  </ul>
                 </div>
               </div>
             )}

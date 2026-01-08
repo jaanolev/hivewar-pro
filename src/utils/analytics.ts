@@ -261,6 +261,22 @@ if (typeof window !== 'undefined') {
       console.table(requests);
       return requests;
     },
+    messages: () => {
+      const messages = JSON.parse(localStorage.getItem('hivewar_messages') || '[]');
+      if (messages.length === 0) {
+        console.log('📭 No messages yet.');
+        return;
+      }
+      console.log('✉️ User Messages:');
+      messages.forEach((msg: any, i: number) => {
+        console.log(`\n--- Message ${i + 1} ---`);
+        console.log(`Type: ${msg.type}`);
+        console.log(`Email: ${msg.email}`);
+        console.log(`Time: ${new Date(msg.timestamp).toLocaleString()}`);
+        console.log(`Message: ${msg.message}`);
+      });
+      return messages;
+    },
     codes: () => {
       const usedCodes = JSON.parse(localStorage.getItem('hivewar_used_codes') || '[]');
       console.log('🎟️ Used Pro Codes:', usedCodes);
@@ -279,17 +295,19 @@ if (typeof window !== 'undefined') {
 ========================
 
 Commands:
-  HiveWarAdmin.report()      - Show daily report
-  HiveWarAdmin.summary()     - Show summary stats
-  HiveWarAdmin.restores()    - View restore purchase requests
-  HiveWarAdmin.codes()       - View used Pro codes
+  HiveWarAdmin.report()       - Show daily report
+  HiveWarAdmin.summary()      - Show summary stats
+  HiveWarAdmin.messages()     - View user messages ⭐
+  HiveWarAdmin.restores()     - View restore purchase requests
+  HiveWarAdmin.codes()        - View used Pro codes
   HiveWarAdmin.generateCode() - Generate a new Pro code
-  HiveWarAdmin.exportJSON()  - Export all data as JSON
-  HiveWarAdmin.download()    - Download analytics file
-  HiveWarAdmin.clear()       - Clear all analytics data
-  HiveWarAdmin.help()        - Show this help
+  HiveWarAdmin.exportJSON()   - Export all data as JSON
+  HiveWarAdmin.download()     - Download analytics file
+  HiveWarAdmin.clear()        - Clear all analytics data
+  HiveWarAdmin.help()         - Show this help
 
 Example:
+  HiveWarAdmin.messages()
   HiveWarAdmin.restores()
   HiveWarAdmin.generateCode()
       `);
