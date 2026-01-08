@@ -188,10 +188,10 @@ input:focus-visible {
 /* Floating Action Buttons Container */
 .floating-buttons {
   position: fixed;
-  bottom: 80px;
-  right: 20px;
+  bottom: 20px;
+  left: 20px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 12px;
   z-index: 100;
 }
@@ -265,8 +265,8 @@ input:focus-visible {
 
 @media (max-width: 768px) {
   .floating-buttons {
-    bottom: 120px;
-    right: 16px;
+    bottom: 16px;
+    left: 16px;
     gap: 10px;
   }
 
