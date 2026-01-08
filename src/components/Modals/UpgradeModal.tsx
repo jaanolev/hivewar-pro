@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { openStripeCheckout, activateProCode, getProStatus, clearProStatus } from '../../utils/pro';
+import { trackEvent, Events } from '../../utils/analytics';
 import './Modal.css';
 import './UpgradeModal.css';
 
@@ -21,6 +22,7 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
   if (!isOpen) return null;
 
   const handleSubscribe = () => {
+    trackEvent(Events.UPGRADE_CLICKED, { tier: 'pro' });
     openStripeCheckout('pro');
     setMessage({
       type: 'success',
@@ -31,6 +33,7 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
   const handleActivateCode = async () => {
     setIsLoading(true);
     setMessage(null);
+    trackEvent(Events.PRO_CODE_ENTERED);
 
     // Simulate network delay for UX
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -43,6 +46,7 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
     });
 
     if (result.success) {
+      trackEvent(Events.PRO_ACTIVATED, { email });
       onProStatusChange(true);
       setTimeout(() => {
         onClose();

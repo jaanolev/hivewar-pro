@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useHivePlan } from './hooks/useHivePlan';
 import { calculateDefensePower, generateId } from './utils/grid';
 import type { PlacedBuilding } from './types';
@@ -12,6 +12,7 @@ import TemplatesModal from './components/Modals/TemplatesModal';
 import HelpModal from './components/Modals/HelpModal';
 import UpgradeModal from './components/Modals/UpgradeModal';
 import { getProStatus } from './utils/pro';
+import { trackSessionStart, trackEvent, Events } from './utils/analytics';
 import './App.css';
 
 export default function App() {
@@ -50,6 +51,11 @@ export default function App() {
   // Pro status - read from localStorage
   const [isPro, setIsPro] = useState(() => getProStatus().isPro);
 
+  // Track session on mount
+  useEffect(() => {
+    trackSessionStart();
+  }, []);
+
   // Get selected building for property panel
   const selectedBuilding = currentPlan?.buildings.find(
     b => b.id === editorState.selectedBuildingId
@@ -59,6 +65,7 @@ export default function App() {
   const handlePlaceBuilding = useCallback((gridX: number, gridY: number) => {
     if (editorState.selectedBuildingTypeId) {
       addBuilding(editorState.selectedBuildingTypeId, gridX, gridY, 1);
+      trackEvent(Events.BUILDING_PLACED, { buildingType: editorState.selectedBuildingTypeId });
     }
   }, [editorState.selectedBuildingTypeId, addBuilding]);
 
@@ -103,6 +110,7 @@ export default function App() {
       id: generateId()
     }));
     updatePlan({ buildings: newBuildings });
+    trackEvent(Events.TEMPLATE_APPLIED, { buildingCount: newBuildings.length });
   }, [updatePlan]);
 
   // Calculate stats
@@ -249,7 +257,10 @@ export default function App() {
         ) : (
           <button 
             className="upgrade-fab"
-            onClick={() => setShowUpgradeModal(true)}
+            onClick={() => {
+              trackEvent(Events.UPGRADE_MODAL_OPENED, { source: 'fab' });
+              setShowUpgradeModal(true);
+            }}
             title="Upgrade to Pro"
           >
             ⭐
@@ -259,7 +270,10 @@ export default function App() {
         {/* Help Button */}
         <button 
           className="help-fab"
-          onClick={() => setShowHelpModal(true)}
+          onClick={() => {
+            trackEvent(Events.HELP_OPENED);
+            setShowHelpModal(true);
+          }}
           title="Help & User Guide"
         >
           ❓

@@ -10,6 +10,7 @@ import {
   getRemainingExports,
   incrementExportCount
 } from '../../utils/storage';
+import { trackEvent, Events } from '../../utils/analytics';
 import './Modal.css';
 
 interface ExportModalProps {
@@ -34,6 +35,7 @@ export default function ExportModal({ plan, stageRef, onClose, onUpgrade, isPro 
     const success = await copyToClipboard(shareUrl);
     if (success) {
       setCopied(true);
+      trackEvent(Events.SHARE_LINK_COPIED);
       setTimeout(() => setCopied(false), 2000);
     }
   };
@@ -41,6 +43,7 @@ export default function ExportModal({ plan, stageRef, onClose, onUpgrade, isPro 
   const handleExportPNG = async () => {
     if (!stageRef.current) return;
     if (!canDoExport) {
+      trackEvent(Events.EXPORT_LIMIT_HIT, { type: 'png' });
       alert('Export limit reached! Upgrade to Pro for unlimited exports.');
       return;
     }
@@ -59,6 +62,7 @@ export default function ExportModal({ plan, stageRef, onClose, onUpgrade, isPro 
       document.body.removeChild(link);
       
       incrementExportCount();
+      trackEvent(Events.EXPORT_PNG, { buildingCount: plan.buildings.length });
     } finally {
       setExporting(false);
     }
@@ -66,22 +70,26 @@ export default function ExportModal({ plan, stageRef, onClose, onUpgrade, isPro 
 
   const handleExportJSON = () => {
     if (!canDoExport) {
+      trackEvent(Events.EXPORT_LIMIT_HIT, { type: 'json' });
       alert('Export limit reached! Upgrade to Pro for unlimited exports.');
       return;
     }
     const json = exportPlanAsJson(plan);
     downloadFile(json, `${plan.name.replace(/\s+/g, '_')}_hive.json`);
     incrementExportCount();
+    trackEvent(Events.EXPORT_JSON, { buildingCount: plan.buildings.length });
   };
 
   const handleExportCSV = () => {
     if (!canDoExport) {
+      trackEvent(Events.EXPORT_LIMIT_HIT, { type: 'csv' });
       alert('Export limit reached! Upgrade to Pro for unlimited exports.');
       return;
     }
     const csv = exportPlanAsCsv(plan, originX, originY);
     downloadFile(csv, `${plan.name.replace(/\s+/g, '_')}_coords.csv`, 'text/csv');
     incrementExportCount();
+    trackEvent(Events.EXPORT_CSV, { buildingCount: plan.buildings.length, originX, originY });
   };
 
   return (
