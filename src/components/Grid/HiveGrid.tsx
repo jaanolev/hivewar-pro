@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { Stage, Layer, Rect, Group, Text } from 'react-konva';
+import { Stage, Layer, Rect, Text } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type { PlacedBuilding, ViewportState, EditorState } from '../../types';
 import { TILE_SIZE, MIN_SCALE, MAX_SCALE, canvasToGrid, gridToCanvas } from '../../utils/grid';
@@ -32,7 +32,7 @@ export default function HiveGrid({
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [viewport, setViewport] = useState<ViewportState>({ x: 0, y: 0, scale: 0.8 });
-  const [isDragging, setIsDragging] = useState(false);
+  const [, setIsDragging] = useState(false);
 
   // Handle container resize
   useEffect(() => {
