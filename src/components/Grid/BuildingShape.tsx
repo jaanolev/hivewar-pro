@@ -47,7 +47,13 @@ export default function BuildingShape({
       x={pos.x}
       y={pos.y}
       draggable={toolMode === 'select' && isSelected}
-      onDragEnd={onDragEnd}
+      onDragStart={(e) => {
+        e.cancelBubble = true;
+      }}
+      onDragEnd={(e) => {
+        e.cancelBubble = true;
+        onDragEnd(e);
+      }}
       onClick={handleClick}
       onTap={handleClick}
     >

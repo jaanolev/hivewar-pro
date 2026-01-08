@@ -231,7 +231,7 @@ export default function HiveGrid({
         y={viewport.y}
         scaleX={viewport.scale}
         scaleY={viewport.scale}
-        draggable={editorState.toolMode === 'pan' || editorState.toolMode === 'select'}
+        draggable={editorState.toolMode === 'pan'}
         onWheel={handleWheel}
         onClick={handleStageClick}
         onTap={handleStageClick}
