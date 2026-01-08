@@ -147,7 +147,11 @@ export function importPlayersFromCsv(csv: string): { name: string; x?: number; y
 // Track exports for freemium (stored in localStorage)
 const EXPORT_COUNT_KEY = 'hivewar-exports';
 const EXPORT_RESET_KEY = 'hivewar-export-reset';
+const BONUS_EXPORTS_KEY = 'hivewar-bonus-exports';
+const SHARE_COUNT_KEY = 'hivewar-share-count';
 const FREE_EXPORT_LIMIT = 3;
+const BONUS_PER_SHARE = 3;
+const MAX_BONUS_EXPORTS = 15; // Cap bonus at 15 (5 shares max)
 
 export function getExportCount(): number {
   // Reset count monthly
@@ -158,10 +162,36 @@ export function getExportCount(): number {
   if (resetDate !== monthKey) {
     localStorage.setItem(EXPORT_RESET_KEY, monthKey);
     localStorage.setItem(EXPORT_COUNT_KEY, '0');
+    // Keep bonus exports - they don't reset monthly
     return 0;
   }
   
   return parseInt(localStorage.getItem(EXPORT_COUNT_KEY) || '0');
+}
+
+export function getBonusExports(): number {
+  return parseInt(localStorage.getItem(BONUS_EXPORTS_KEY) || '0');
+}
+
+export function getShareCount(): number {
+  return parseInt(localStorage.getItem(SHARE_COUNT_KEY) || '0');
+}
+
+export function addBonusExports(amount: number = BONUS_PER_SHARE): number {
+  const current = getBonusExports();
+  const newBonus = Math.min(current + amount, MAX_BONUS_EXPORTS);
+  localStorage.setItem(BONUS_EXPORTS_KEY, newBonus.toString());
+  
+  // Track share count
+  const shareCount = getShareCount() + 1;
+  localStorage.setItem(SHARE_COUNT_KEY, shareCount.toString());
+  
+  return newBonus;
+}
+
+export function getTotalExportLimit(isPro: boolean = false): number {
+  if (isPro) return Infinity;
+  return FREE_EXPORT_LIMIT + getBonusExports();
 }
 
 export function incrementExportCount(): number {
@@ -173,11 +203,15 @@ export function incrementExportCount(): number {
 
 export function canExport(isPro: boolean = false): boolean {
   if (isPro) return true;
-  return getExportCount() < FREE_EXPORT_LIMIT;
+  return getExportCount() < getTotalExportLimit(false);
 }
 
 export function getRemainingExports(isPro: boolean = false): number {
   if (isPro) return Infinity;
-  return Math.max(0, FREE_EXPORT_LIMIT - getExportCount());
+  return Math.max(0, getTotalExportLimit(false) - getExportCount());
+}
+
+export function canEarnMoreBonusExports(): boolean {
+  return getBonusExports() < MAX_BONUS_EXPORTS;
 }
 

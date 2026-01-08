@@ -68,6 +68,14 @@ export function trackEvent(event: string, data?: Record<string, any>): void {
     data
   });
   
+  // Also send to Google Analytics 4 if available
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    (window as any).gtag('event', event, {
+      ...data,
+      session_id: getSessionId()
+    });
+  }
+  
   saveAnalyticsData(analyticsData);
   
   // Also log to console in dev
