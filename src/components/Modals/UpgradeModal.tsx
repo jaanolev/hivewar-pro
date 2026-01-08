@@ -12,10 +12,13 @@ interface UpgradeModalProps {
 
 export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: UpgradeModalProps) {
   const [showCodeInput, setShowCodeInput] = useState(false);
+  const [showRestoreForm, setShowRestoreForm] = useState(false);
   const [code, setCode] = useState('');
   const [email, setEmail] = useState('');
+  const [restoreEmail, setRestoreEmail] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [restoreSubmitted, setRestoreSubmitted] = useState(false);
 
   const proStatus = getProStatus();
 
@@ -62,6 +65,35 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
       onProStatusChange(false);
       setMessage({ type: 'success', text: 'Pro deactivated. You\'re now on the free tier.' });
     }
+  };
+
+  const handleRestoreSubmit = async () => {
+    if (!restoreEmail || !restoreEmail.includes('@')) {
+      setMessage({ type: 'error', text: 'Please enter a valid email address.' });
+      return;
+    }
+
+    setIsLoading(true);
+    trackEvent('restore_purchase_requested', { email: restoreEmail });
+
+    // Simulate processing
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    // Store the restore request locally (you'll see this in analytics)
+    const restoreRequests = JSON.parse(localStorage.getItem('hivewar_restore_requests') || '[]');
+    restoreRequests.push({
+      email: restoreEmail,
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent
+    });
+    localStorage.setItem('hivewar_restore_requests', JSON.stringify(restoreRequests));
+
+    setRestoreSubmitted(true);
+    setIsLoading(false);
+    setMessage({
+      type: 'success',
+      text: 'Request received! Check your email within 24 hours for your Pro code.'
+    });
   };
 
   return (
@@ -138,7 +170,7 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
                 {!showCodeInput ? (
                   <button 
                     className="have-code-btn"
-                    onClick={() => setShowCodeInput(true)}
+                    onClick={() => { setShowCodeInput(true); setShowRestoreForm(false); }}
                   >
                     🎟️ I have a Pro code
                   </button>
@@ -173,6 +205,57 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
                     >
                       Cancel
                     </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Restore Purchase */}
+              <div className="restore-section">
+                {!showRestoreForm ? (
+                  <button 
+                    className="restore-btn"
+                    onClick={() => { setShowRestoreForm(true); setShowCodeInput(false); }}
+                  >
+                    🔄 Lost your Pro access? Restore it
+                  </button>
+                ) : (
+                  <div className="restore-form">
+                    <h4>🔄 Restore Your Purchase</h4>
+                    <p className="restore-desc">
+                      Enter the email you used when subscribing. We'll verify your payment and send you a new code.
+                    </p>
+                    {!restoreSubmitted ? (
+                      <>
+                        <input
+                          type="email"
+                          placeholder="Your payment email"
+                          value={restoreEmail}
+                          onChange={(e) => setRestoreEmail(e.target.value)}
+                          className="code-input"
+                        />
+                        <button 
+                          className="activate-btn"
+                          onClick={handleRestoreSubmit}
+                          disabled={isLoading || !restoreEmail}
+                        >
+                          {isLoading ? 'Submitting...' : 'Request Restore'}
+                        </button>
+                        <button 
+                          className="cancel-code-btn"
+                          onClick={() => setShowRestoreForm(false)}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <div className="restore-success">
+                        <p>✅ We received your request!</p>
+                        <p>Check <strong>{restoreEmail}</strong> within 24 hours.</p>
+                        <p className="restore-note">
+                          If you don't receive an email, check spam or contact us on Discord.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

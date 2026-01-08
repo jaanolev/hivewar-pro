@@ -251,21 +251,47 @@ if (typeof window !== 'undefined') {
         console.log('🗑️ Analytics cleared');
       }
     },
+    restores: () => {
+      const requests = JSON.parse(localStorage.getItem('hivewar_restore_requests') || '[]');
+      if (requests.length === 0) {
+        console.log('📭 No restore requests yet.');
+        return;
+      }
+      console.log('📧 Restore Requests:');
+      console.table(requests);
+      return requests;
+    },
+    codes: () => {
+      const usedCodes = JSON.parse(localStorage.getItem('hivewar_used_codes') || '[]');
+      console.log('🎟️ Used Pro Codes:', usedCodes);
+      return usedCodes;
+    },
+    generateCode: () => {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      const segment = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+      const code = `HIVE-${segment()}-${segment()}-${segment()}`;
+      console.log('🎟️ New Pro Code:', code);
+      return code;
+    },
     help: () => {
       console.log(`
 📊 HiveWar Admin Console
 ========================
 
 Commands:
-  HiveWarAdmin.report()    - Show daily report
-  HiveWarAdmin.summary()   - Show summary stats
-  HiveWarAdmin.exportJSON() - Export all data as JSON
-  HiveWarAdmin.download()  - Download analytics file
-  HiveWarAdmin.clear()     - Clear all analytics data
-  HiveWarAdmin.help()      - Show this help
+  HiveWarAdmin.report()      - Show daily report
+  HiveWarAdmin.summary()     - Show summary stats
+  HiveWarAdmin.restores()    - View restore purchase requests
+  HiveWarAdmin.codes()       - View used Pro codes
+  HiveWarAdmin.generateCode() - Generate a new Pro code
+  HiveWarAdmin.exportJSON()  - Export all data as JSON
+  HiveWarAdmin.download()    - Download analytics file
+  HiveWarAdmin.clear()       - Clear all analytics data
+  HiveWarAdmin.help()        - Show this help
 
 Example:
-  HiveWarAdmin.report()
+  HiveWarAdmin.restores()
+  HiveWarAdmin.generateCode()
       `);
     }
   };

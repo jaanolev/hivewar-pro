@@ -320,6 +320,69 @@
   background: rgba(239, 68, 68, 0.1);
 }
 
+/* Restore Section */
+.restore-section {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.restore-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 8px 16px;
+  transition: all 0.2s;
+}
+
+.restore-btn:hover {
+  color: var(--accent-primary);
+}
+
+.restore-form {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.restore-form h4 {
+  margin: 0 0 8px 0;
+  color: #3b82f6;
+  font-size: 15px;
+}
+
+.restore-desc {
+  margin: 0 0 16px 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.restore-success {
+  text-align: center;
+}
+
+.restore-success p {
+  margin: 8px 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.restore-success p:first-child {
+  color: #10b981;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.restore-note {
+  color: var(--text-muted) !important;
+  font-size: 12px !important;
+  margin-top: 16px !important;
+}
+
 /* Footer */
 .upgrade-footer {
   padding: 12px 20px;
