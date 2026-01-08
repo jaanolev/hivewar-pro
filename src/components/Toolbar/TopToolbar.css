@@ -163,14 +163,63 @@
   background: rgba(239, 68, 68, 0.2);
 }
 
+/* Templates Button - THE STAR ⭐ */
 .action-btn.templates {
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   border-color: transparent;
   color: white;
+  font-weight: 600;
+  padding: 0 16px;
+  position: relative;
+  overflow: visible;
+}
+
+.action-btn.templates::before {
+  content: '✨';
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  font-size: 12px;
+  animation: sparkle 1.5s ease-in-out infinite;
 }
 
 .action-btn.templates:hover {
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.6);
+  transform: translateY(-2px) scale(1.02);
+}
+
+/* Glowing pulse animation */
+.glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(245, 158, 11, 0.4),
+                0 0 10px rgba(245, 158, 11, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.6),
+                0 0 30px rgba(245, 158, 11, 0.4),
+                0 0 45px rgba(245, 158, 11, 0.2);
+  }
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.2); }
+}
+
+/* Button content layout */
+.btn-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.btn-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
 /* Mobile adjustments */
@@ -199,12 +248,22 @@
     font-size: 14px;
   }
 
-  .action-btn span {
+  /* Hide labels on smaller screens */
+  .btn-label {
     display: none;
   }
 
   .action-btn {
     padding: 0 10px;
+  }
+
+  /* But keep Templates label visible! */
+  .action-btn.templates .btn-label {
+    display: inline;
+  }
+
+  .action-btn.templates {
+    padding: 0 14px;
   }
 }
 
@@ -217,6 +276,12 @@
 
   .divider {
     display: none;
+  }
+
+  /* Even on smallest screens, keep Templates prominent */
+  .action-btn.templates .btn-label {
+    display: inline;
+    font-size: 11px;
   }
 }
 

@@ -121,20 +121,23 @@ export default function TopToolbar({
       </div>
 
       <div className="toolbar-right">
-        <button className="action-btn templates" onClick={onTemplatesOpen} title="Templates">
-          📋
+        <button className="action-btn templates glow-pulse" onClick={onTemplatesOpen} title="Browse pre-built hive layouts">
+          <span className="btn-icon">📋</span>
+          <span className="btn-label">Templates</span>
         </button>
         <button className="action-btn danger" onClick={onClear} title="Clear All">
-          🗑️
+          <span className="btn-icon">🗑️</span>
         </button>
         <button className="action-btn" onClick={onSave} title="Save">
-          💾
+          <span className="btn-icon">💾</span>
         </button>
         <button className="action-btn primary" onClick={onExport} title="Export PNG">
-          📷
+          <span className="btn-icon">📷</span>
+          <span className="btn-label">Export</span>
         </button>
         <button className="action-btn accent" onClick={onShare} title="Share Link">
-          🔗
+          <span className="btn-icon">🔗</span>
+          <span className="btn-label">Share</span>
         </button>
       </div>
     </div>
