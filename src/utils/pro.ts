@@ -54,14 +54,28 @@ export function clearProStatus(): void {
   localStorage.removeItem(PRO_ACTIVATED_KEY);
 }
 
+// Secret admin codes (these always work, never expire)
+const ADMIN_CODES = [
+  'HIVE-ADMIN-2026-BOSS',
+  'HIVE-DEV-UNLIM-ITED',
+];
+
 // Activate Pro with a code (simple code system for manual fulfillment)
 // Codes are in format: HIVE-XXXX-XXXX-XXXX
 export function activateProCode(code: string, email: string): { success: boolean; message: string } {
+  const upperCode = code.toUpperCase().trim();
+  
+  // Check admin codes first (always work, no email required)
+  if (ADMIN_CODES.includes(upperCode)) {
+    setProStatus(email || 'admin@hivewar.pro', 'ultra');
+    return { success: true, message: '👑 Admin access activated! You have unlimited everything.' };
+  }
+  
   // For MVP: Accept any code that matches the pattern
   // In production: Validate against a database or Stripe
   const codePattern = /^HIVE-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
   
-  if (!codePattern.test(code.toUpperCase())) {
+  if (!codePattern.test(upperCode)) {
     return { success: false, message: 'Invalid code format. Codes look like: HIVE-XXXX-XXXX-XXXX' };
   }
 
@@ -71,7 +85,7 @@ export function activateProCode(code: string, email: string): { success: boolean
 
   // Check if code was already used (simple check)
   const usedCodes = JSON.parse(localStorage.getItem('hivewar_used_codes') || '[]');
-  if (usedCodes.includes(code.toUpperCase())) {
+  if (usedCodes.includes(upperCode)) {
     return { success: false, message: 'This code has already been used.' };
   }
 
@@ -79,7 +93,7 @@ export function activateProCode(code: string, email: string): { success: boolean
   setProStatus(email, 'pro');
   
   // Mark code as used
-  usedCodes.push(code.toUpperCase());
+  usedCodes.push(upperCode);
   localStorage.setItem('hivewar_used_codes', JSON.stringify(usedCodes));
 
   return { success: true, message: 'Pro activated! Enjoy unlimited exports and all features.' };
