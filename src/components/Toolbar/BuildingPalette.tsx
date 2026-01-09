@@ -23,7 +23,8 @@ export default function BuildingPalette({
   return (
     <div className={`building-palette ${isOpen ? 'open' : ''}`}>
       <button className="palette-toggle" onClick={onToggle}>
-        {isOpen ? '◀' : '🏗️'}
+        <span className="toggle-icon">{isOpen ? '▼' : '🏗️'}</span>
+        <span className="toggle-text">{isOpen ? 'Close' : 'Buildings'}</span>
       </button>
 
       {isOpen && (

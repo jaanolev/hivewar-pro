@@ -37,6 +37,7 @@
   font-size: 20px;
   cursor: pointer;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .menu-btn:hover {
@@ -222,66 +223,114 @@
   letter-spacing: 0.3px;
 }
 
-/* Mobile adjustments */
+/* ============================================
+   MOBILE STYLES - Compact Single Row
+   ============================================ */
 @media (max-width: 768px) {
   .top-toolbar {
-    height: auto;
-    flex-wrap: wrap;
-    padding: 8px;
-    gap: 8px;
-  }
-
-  .toolbar-left,
-  .toolbar-center,
-  .toolbar-right {
-    flex: 1;
-    min-width: 100%;
-    justify-content: center;
+    height: 56px;
+    padding: 0 8px;
+    gap: 6px;
   }
 
   .toolbar-left {
-    justify-content: flex-start;
+    gap: 8px;
   }
 
-  .plan-name {
-    max-width: 120px;
-    font-size: 14px;
+  .toolbar-center {
+    gap: 4px;
   }
 
-  /* Hide labels on smaller screens */
-  .btn-label {
-    display: none;
+  .toolbar-right {
+    gap: 4px;
   }
 
-  .action-btn {
-    padding: 0 10px;
+  .menu-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+    border-radius: 8px;
   }
 
-  /* But keep Templates label visible! */
-  .action-btn.templates .btn-label {
-    display: inline;
+  .plan-info {
+    display: none; /* Hide plan name on mobile - show in menu */
   }
 
-  .action-btn.templates {
-    padding: 0 14px;
+  .tool-group {
+    padding: 3px;
+    gap: 2px;
   }
-}
 
-@media (max-width: 480px) {
   .tool-btn {
     width: 32px;
     height: 32px;
     font-size: 14px;
+    border-radius: 6px;
   }
 
   .divider {
     display: none;
   }
 
-  /* Even on smallest screens, keep Templates prominent */
+  .action-btn {
+    height: 32px;
+    padding: 0 8px;
+    font-size: 12px;
+    border-radius: 6px;
+  }
+
+  /* Hide labels on mobile */
+  .btn-label {
+    display: none;
+  }
+
+  /* Keep Templates compact but visible */
+  .action-btn.templates {
+    padding: 0 10px;
+  }
+
   .action-btn.templates .btn-label {
-    display: inline;
-    font-size: 11px;
+    display: none;
+  }
+
+  .action-btn.templates::before {
+    top: -4px;
+    right: -4px;
+    font-size: 10px;
+  }
+
+  /* Plan stats hide on small screens */
+  .plan-stats {
+    display: none;
   }
 }
 
+/* Extra small screens */
+@media (max-width: 480px) {
+  .top-toolbar {
+    height: 50px;
+    padding: 0 6px;
+  }
+
+  .menu-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 16px;
+  }
+
+  .tool-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+  }
+
+  .action-btn {
+    height: 30px;
+    padding: 0 6px;
+  }
+
+  /* Hide less important buttons on tiny screens */
+  .action-btn.danger {
+    display: none;
+  }
+}

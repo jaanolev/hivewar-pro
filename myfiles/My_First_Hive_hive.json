@@ -1,0 +1,187 @@
+{
+  "id": "1767902002829-a17jwofq0",
+  "name": "My First Hive",
+  "description": "",
+  "gridWidth": 50,
+  "gridHeight": 50,
+  "buildings": [
+    {
+      "id": "1767917846477-22d1iydch",
+      "buildingTypeId": "hq-marshal",
+      "gridX": 23,
+      "gridY": 23,
+      "rotation": 0,
+      "level": 30,
+      "playerName": "R5 Marshal"
+    },
+    {
+      "id": "1767917846477-v4l9a6212",
+      "buildingTypeId": "wall",
+      "gridX": 22,
+      "gridY": 22,
+      "rotation": 0,
+      "level": 1
+    },
+    {
+      "id": "1767917846477-5o07lip70",
+      "buildingTypeId": "wall",
+      "gridX": 23,
+      "gridY": 22,
+      "rotation": 0,
+      "level": 1
+    },
+    {
+      "id": "1767917846477-afdpnjz9z",
+      "buildingTypeId": "wall",
+      "gridX": 24,
+      "gridY": 20,
+      "rotation": 0,
+      "level": 1
+    },
+    {
+      "id": "1767917846477-t42vjkjol",
+      "buildingTypeId": "wall",
+      "gridX": 25,
+      "gridY": 22,
+      "rotation": 180,
+      "level": 1,
+      "playerName": "John Smith",
+      "notes": "Some stuff here!"
+    },
+    {
+      "id": "1767917846477-3zcr2bzge",
+      "buildingTypeId": "wall",
+      "gridX": 26,
+      "gridY": 22,
+      "rotation": 0,
+      "level": 1
+    },
+    {
+      "id": "1767917846477-vyryrdu1x",
+      "buildingTypeId": "wall",
+      "gridX": 26,
+      "gridY": 23,
+      "rotation": 0,
+      "level": 1
+    },
+    {
+      "id": "1767917846477-6rz2l3c4o",
+      "buildingTypeId": "wall",
+      "gridX": 26,
+      "gridY": 24,
+      "rotation": 0,
+      "level": 1
+    },
+    {
+      "id": "1767917846477-yzw5utkcz",
+      "buildingTypeId": "wall",
+      "gridX": 26,
+      "gridY": 25,
+      "rotation": 0,
+      "level": 1
+    },
+    {
+      "id": "1767917846477-17nejz8at",
+      "buildingTypeId": "wall",
+      "gridX": 26,
+      "gridY": 26,
+      "rotation": 0,
+      "level": 1
+    },
+    {
+      "id": "1767917846477-4agzzdw9m",
+      "buildingTypeId": "wall",
+      "gridX": 25,
+      "gridY": 26,
+      "rotation": 0,
+      "level": 1
+    },
+    {
+      "id": "1767917846477-f736znnu2",
+      "buildingTypeId": "wall",
+      "gridX": 24,
+      "gridY": 26,
+      "rotation": 0,
+      "level": 1
+    },
+    {
+      "id": "1767917846477-y9nqdix6x",
+      "buildingTypeId": "wall",
+      "gridX": 23,
+      "gridY": 26,
+      "rotation": 0,
+      "level": 1
+    },
+    {
+      "id": "1767917846477-posxn6l8x",
+      "buildingTypeId": "wall",
+      "gridX": 22,
+      "gridY": 26,
+      "rotation": 0,
+      "level": 1
+    },
+    {
+      "id": "1767917846477-kq3vz39w8",
+      "buildingTypeId": "wall",
+      "gridX": 22,
+      "gridY": 25,
+      "rotation": 0,
+      "level": 1
+    },
+    {
+      "id": "1767917846477-x1y8ch3fc",
+      "buildingTypeId": "wall",
+      "gridX": 22,
+      "gridY": 24,
+      "rotation": 0,
+      "level": 1
+    },
+    {
+      "id": "1767917846477-osnyshhly",
+      "buildingTypeId": "wall",
+      "gridX": 22,
+      "gridY": 23,
+      "rotation": 0,
+      "level": 1
+    },
+    {
+      "id": "1767917846477-1ge9up4n0",
+      "buildingTypeId": "hq-r4",
+      "gridX": 20,
+      "gridY": 20,
+      "rotation": 0,
+      "level": 25,
+      "playerName": "R4 NW"
+    },
+    {
+      "id": "1767917846477-ev0pthmfw",
+      "buildingTypeId": "hq-r4",
+      "gridX": 27,
+      "gridY": 20,
+      "rotation": 0,
+      "level": 25,
+      "playerName": "R4 NE"
+    },
+    {
+      "id": "1767917846477-ivolhpbtb",
+      "buildingTypeId": "hq-r4",
+      "gridX": 27,
+      "gridY": 27,
+      "rotation": 0,
+      "level": 25,
+      "playerName": "R4 SE"
+    },
+    {
+      "id": "1767917846477-fhiq1lhmf",
+      "buildingTypeId": "hq-r4",
+      "gridX": 20,
+      "gridY": 27,
+      "rotation": 0,
+      "level": 25,
+      "playerName": "R4 SW"
+    }
+  ],
+  "createdAt": 1767902002829,
+  "updatedAt": 1767917875994,
+  "version": "1.0.0"
+}

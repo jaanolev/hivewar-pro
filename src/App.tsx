@@ -118,7 +118,7 @@ export default function App() {
   const defensePower = currentPlan ? calculateDefensePower(currentPlan.buildings) : 0;
 
   if (!currentPlan) {
-    return (
+  return (
       <div className="loading-screen">
         <div className="loading-content">
           <div className="loading-icon">🏰</div>
