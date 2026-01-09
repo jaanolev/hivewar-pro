@@ -58,6 +58,8 @@ export function clearProStatus(): void {
 const ADMIN_CODES = [
   'HIVE-ADMIN-2026-BOSS',
   'HIVE-DEV-UNLIM-ITED',
+  'ADMIN',  // Simple shortcut
+  'BOSS',   // Simple shortcut
 ];
 
 // Activate Pro with a code (simple code system for manual fulfillment)
