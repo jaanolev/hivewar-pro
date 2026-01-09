@@ -186,16 +186,16 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
                     />
                     <input
                       type="text"
-                      placeholder="HIVE-XXXX-XXXX-XXXX"
+                      placeholder="Enter code (e.g. HIVE-XXXX-XXXX-XXXX)"
                       value={code}
                       onChange={(e) => setCode(e.target.value.toUpperCase())}
                       className="code-input"
-                      maxLength={19}
+                      maxLength={30}
                     />
                     <button 
                       className="activate-btn"
                       onClick={handleActivateCode}
-                      disabled={isLoading || !code || !email}
+                      disabled={isLoading || !code}
                     >
                       {isLoading ? 'Activating...' : 'Activate Pro'}
                     </button>
