@@ -1,10 +1,14 @@
 .upgrade-modal {
   max-width: 420px;
-  overflow: hidden;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .upgrade-content {
   padding: 20px;
+  overflow-y: auto;
+  flex: 1;
 }
 
 /* Pricing Card */
@@ -401,6 +405,11 @@
   .upgrade-modal {
     max-width: 100%;
     margin: 10px;
+    max-height: 90vh;
+  }
+
+  .upgrade-content {
+    padding: 16px;
   }
 
   .pricing-amount .price {
