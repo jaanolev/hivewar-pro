@@ -243,13 +243,14 @@ export default function HiveGrid({
         onDragEnd={handleDragEnd}
       >
         <Layer>
-          {/* Background */}
+          {/* Background - listening={false} so clicks pass through to Stage */}
           <Rect
             x={0}
             y={0}
             width={gridWidth * TILE_SIZE}
             height={gridHeight * TILE_SIZE}
             fill="#1a1a2e"
+            listening={false}
           />
 
           {/* Grid lines */}
