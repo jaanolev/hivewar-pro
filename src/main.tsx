@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import AdminDashboard from './pages/AdminDashboard.tsx'
+import LandingPage from './pages/LandingPage.tsx'
 
 // Simple hash-based routing
 function Router() {
@@ -12,6 +13,12 @@ function Router() {
     return <AdminDashboard />;
   }
   
+  if (hash === '#/landing' || hash === '#/home') {
+    return <LandingPage />;
+  }
+  
+  // Default: show the app (for existing users)
+  // New users can go to #/landing to see info first
   return <App />;
 }
 
