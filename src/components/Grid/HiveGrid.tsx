@@ -133,6 +133,7 @@ export default function HiveGrid({
           width={1}
           height={gridHeight * TILE_SIZE}
           fill={isMajor ? majorGridColor : gridColor}
+          listening={false}
         />
       );
     }
@@ -148,6 +149,7 @@ export default function HiveGrid({
           width={gridWidth * TILE_SIZE}
           height={1}
           fill={isMajor ? majorGridColor : gridColor}
+          listening={false}
         />
       );
     }
@@ -172,6 +174,7 @@ export default function HiveGrid({
           fontSize={10}
           fill="#888"
           align="center"
+          listening={false}
         />
       );
     }
@@ -187,6 +190,7 @@ export default function HiveGrid({
           fontSize={10}
           fill="#888"
           align="right"
+          listening={false}
         />
       );
     }
