@@ -129,6 +129,7 @@ export const Events = {
   UPGRADE_CLICKED: 'upgrade_clicked',
   PRO_CODE_ENTERED: 'pro_code_entered',
   PRO_ACTIVATED: 'pro_activated',
+  PAYMENT_COMPLETED: 'payment_completed',
   
   // Engagement
   HELP_OPENED: 'help_opened',

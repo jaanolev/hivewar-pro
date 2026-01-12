@@ -51,9 +51,20 @@ export default function App() {
   // Pro status - read from localStorage
   const [isPro, setIsPro] = useState(() => getProStatus().isPro);
 
-  // Track session on mount
+  // Track session on mount + handle payment success redirect
   useEffect(() => {
     trackSessionStart();
+    
+    // Check if returning from successful payment
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('payment') === 'success') {
+      // Show upgrade modal so user can enter their code/email
+      setShowUpgradeModal(true);
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+      // Track the payment completion
+      trackEvent(Events.PAYMENT_COMPLETED);
+    }
   }, []);
 
   // Get selected building for property panel

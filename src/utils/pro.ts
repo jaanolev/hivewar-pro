@@ -1,6 +1,9 @@
 // Pro subscription management
 
 // Stripe Payment Links
+// Note: The success_url redirect is configured in Stripe Dashboard
+// Go to: Payment Links → Edit → After payment → Redirect to your website
+// Set success URL to: https://lastwarmobilegameaddonapp.vercel.app/?payment=success#/
 export const STRIPE_LINKS = {
   PRO_MONTHLY: 'https://buy.stripe.com/00weVcb8M3dCbKAg421oI00',
   // Add more tiers later:
