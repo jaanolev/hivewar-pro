@@ -43,6 +43,7 @@ export default function App() {
     hasEditLock,
     otherUserHoldsLock,
     isLockStale,
+    canEdit,
     peerCount,
     takeLock,
     releaseLock,
@@ -202,6 +203,7 @@ export default function App() {
           onMoveBuilding={handleMoveBuilding}
           onDeleteBuilding={deleteBuilding}
           stageRef={stageRef}
+          canEdit={canEdit}
         />
       </main>
 

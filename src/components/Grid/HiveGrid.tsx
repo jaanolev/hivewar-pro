@@ -16,6 +16,7 @@ interface HiveGridProps {
   onMoveBuilding: (buildingId: string, gridX: number, gridY: number) => void;
   onDeleteBuilding: (buildingId: string) => void;
   stageRef: React.RefObject<any>;
+  canEdit: boolean;
 }
 
 export default function HiveGrid({
@@ -27,7 +28,8 @@ export default function HiveGrid({
   onSelectBuilding,
   onMoveBuilding,
   onDeleteBuilding,
-  stageRef
+  stageRef,
+  canEdit,
 }: HiveGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
@@ -81,7 +83,7 @@ export default function HiveGrid({
   const handleStageClick = useCallback((e: KonvaEventObject<MouseEvent | TouchEvent>) => {
     // Check if clicked on empty space
     if (e.target === e.target.getStage()) {
-      if (editorState.toolMode === 'place' && editorState.selectedBuildingTypeId) {
+      if (canEdit && editorState.toolMode === 'place' && editorState.selectedBuildingTypeId) {
         const stage = stageRef.current;
         if (!stage) return;
 
@@ -98,7 +100,7 @@ export default function HiveGrid({
         onSelectBuilding(null);
       }
     }
-  }, [editorState, viewport, onPlaceBuilding, onSelectBuilding, stageRef]);
+  }, [canEdit, editorState, viewport, onPlaceBuilding, onSelectBuilding, stageRef]);
 
   // Handle stage drag
   const handleDragStart = useCallback(() => {
@@ -269,6 +271,7 @@ export default function HiveGrid({
               onDragEnd={(e) => handleBuildingDragEnd(building.id, e)}
               onDelete={() => onDeleteBuilding(building.id)}
               toolMode={editorState.toolMode}
+              canEdit={canEdit}
             />
           ))}
         </Layer>

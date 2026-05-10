@@ -11,6 +11,7 @@ interface BuildingShapeProps {
   onDragEnd: (e: KonvaEventObject<DragEvent>) => void;
   onDelete: () => void;
   toolMode: ToolMode;
+  canEdit: boolean;
 }
 
 export default function BuildingShape({
@@ -19,7 +20,8 @@ export default function BuildingShape({
   onSelect,
   onDragEnd,
   onDelete,
-  toolMode
+  toolMode,
+  canEdit,
 }: BuildingShapeProps) {
   const buildingType = getBuildingById(building.buildingTypeId);
   if (!buildingType) return null;
@@ -34,8 +36,8 @@ export default function BuildingShape({
 
   const handleClick = (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
     e.cancelBubble = true;
-    
-    if (toolMode === 'delete') {
+
+    if (toolMode === 'delete' && canEdit) {
       onDelete();
     } else {
       onSelect();
@@ -46,7 +48,7 @@ export default function BuildingShape({
     <Group
       x={pos.x}
       y={pos.y}
-      draggable={toolMode === 'select' && isSelected}
+      draggable={canEdit && toolMode === 'select' && isSelected}
       onDragStart={(e) => {
         e.cancelBubble = true;
       }}
