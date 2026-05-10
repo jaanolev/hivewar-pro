@@ -9,7 +9,13 @@ import {
   loadCurrentPlanId,
   loadPlanFromUrl,
 } from '../utils/storage';
-import { listPlans, upsertPlan, deletePlanRow } from '../utils/cloudStorage';
+import {
+  listPlans,
+  upsertPlan,
+  deletePlanRow,
+  joinPlanByToken,
+  getPlanById,
+} from '../utils/cloudStorage';
 import { useAuth } from '../lib/auth';
 
 const MIGRATED_KEY = 'hivewar-migrated-to-cloud';
@@ -42,11 +48,32 @@ export function useHivePlan() {
     let cancelled = false;
 
     async function bootstrap() {
-      // URL-shared plan takes precedence as a one-shot view (existing behavior).
-      // We don't auto-save it to the user's cloud account; they can save it
-      // explicitly via the menu later if they want.
+      // Live-share / view token in URL: join the plan as a collaborator,
+      // then it shows up in the regular cloud plan list via RLS.
+      const params = new URLSearchParams(window.location.search);
+      const collabToken = params.get('share') || params.get('view');
+      let joinedPlanId: string | null = null;
+      if (collabToken) {
+        try {
+          const result = await joinPlanByToken(collabToken);
+          if (cancelled) return;
+          joinedPlanId = result.plan_id;
+          params.delete('share');
+          params.delete('view');
+          const newSearch = params.toString();
+          const newUrl =
+            window.location.pathname + (newSearch ? '?' + newSearch : '') + window.location.hash;
+          window.history.replaceState({}, '', newUrl);
+        } catch (e) {
+          console.error('[plan] joinPlanByToken failed:', e);
+          alert('That share link is invalid or expired.');
+        }
+      }
+
+      // Legacy snapshot share (?plan=lzstring...) still loads as a read-only
+      // local-only view; we don't auto-save it to the user's cloud account.
       const urlPlan = loadPlanFromUrl();
-      if (urlPlan) {
+      if (urlPlan && !joinedPlanId) {
         if (cancelled) return;
         setCurrentPlan(urlPlan);
         window.history.replaceState({}, '', window.location.pathname);
@@ -72,9 +99,29 @@ export function useHivePlan() {
       // Mirror to localStorage as an offline cache.
       savePlansToStorage(cloudPlans);
 
-      if (urlPlan) {
-        // currentPlan already set to URL plan above.
+      if (urlPlan && !joinedPlanId) {
+        // currentPlan already set to URL snapshot plan above.
         return;
+      }
+
+      // If we just joined a plan via share/view token, switch to it.
+      if (joinedPlanId) {
+        let joined = cloudPlans.find((p) => p.id === joinedPlanId);
+        if (!joined) {
+          // Race: realtime / RLS might lag, fetch directly.
+          const fetched = await getPlanById(joinedPlanId);
+          if (cancelled) return;
+          if (fetched) {
+            joined = fetched;
+            setPlans([fetched, ...cloudPlans]);
+            savePlansToStorage([fetched, ...cloudPlans]);
+          }
+        }
+        if (joined) {
+          setCurrentPlan(joined);
+          saveCurrentPlanId(joined.id);
+          return;
+        }
       }
 
       const currentId = loadCurrentPlanId();

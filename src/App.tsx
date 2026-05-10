@@ -11,6 +11,7 @@ import MenuModal from './components/Modals/MenuModal';
 import TemplatesModal from './components/Modals/TemplatesModal';
 import HelpModal from './components/Modals/HelpModal';
 import UpgradeModal from './components/Modals/UpgradeModal';
+import ShareModal from './components/Modals/ShareModal';
 import { getProStatus } from './utils/pro';
 import { trackSessionStart, trackEvent, Events } from './utils/analytics';
 import './App.css';
@@ -47,6 +48,7 @@ export default function App() {
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showLiveShareModal, setShowLiveShareModal] = useState(false);
   
   // Pro status - read from localStorage
   const [isPro, setIsPro] = useState(() => getProStatus().isPro);
@@ -254,6 +256,15 @@ export default function App() {
         onProStatusChange={setIsPro}
       />
 
+      {/* Live Share Modal */}
+      {showLiveShareModal && currentPlan && (
+        <ShareModal
+          planId={currentPlan.id}
+          planName={currentPlan.name}
+          onClose={() => setShowLiveShareModal(false)}
+        />
+      )}
+
       {/* Floating Buttons */}
       <div className="floating-buttons">
         {/* Pro Badge or Upgrade Button */}
@@ -278,8 +289,17 @@ export default function App() {
           </button>
         )}
         
+        {/* Live Share Button */}
+        <button
+          className="live-share-fab"
+          onClick={() => setShowLiveShareModal(true)}
+          title="Live share with alliance"
+        >
+          🔗
+        </button>
+
         {/* Help Button */}
-        <button 
+        <button
           className="help-fab"
           onClick={() => {
             trackEvent(Events.HELP_OPENED);
