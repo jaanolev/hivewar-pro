@@ -155,10 +155,10 @@ begin
   from public.plans where id = plan_id_input;
 
   if v_share is null then
-    v_share := translate(encode(gen_random_bytes(16), 'base64'), '+/=', '-_');
+    v_share := replace(gen_random_uuid()::text, '-', '');
   end if;
   if v_view is null then
-    v_view := translate(encode(gen_random_bytes(16), 'base64'), '+/=', '-_');
+    v_view := replace(gen_random_uuid()::text, '-', '');
   end if;
 
   update public.plans
