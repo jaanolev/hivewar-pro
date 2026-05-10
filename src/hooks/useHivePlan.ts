@@ -15,11 +15,22 @@ import {
   deletePlanRow,
   joinPlanByToken,
   getPlanById,
+  acquireEditLock,
+  heartbeatEditLock,
+  releaseEditLock,
 } from '../utils/cloudStorage';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 
 const MIGRATED_KEY = 'hivewar-migrated-to-cloud';
 const SAVE_DEBOUNCE_MS = 500;
+const HEARTBEAT_MS = 60_000;
+const LOCK_STALE_MS = 3 * 60_000;
+
+export interface EditLockState {
+  editorUserId: string | null;
+  acquiredAt: number | null; // epoch ms
+}
 
 export function useHivePlan() {
   const { user, loading: authLoading } = useAuth();
@@ -36,6 +47,19 @@ export function useHivePlan() {
   });
   const [history, setHistory] = useState<PlacedBuilding[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+
+  // Live editing lock for the currently-viewed plan. Null when the plan
+  // is unshared (only one user) or when the lock state is still loading.
+  const [lockState, setLockState] = useState<EditLockState>({
+    editorUserId: null,
+    acquiredAt: null,
+  });
+  const lockStateRef = useRef(lockState);
+  lockStateRef.current = lockState;
+
+  // Number of OTHER users currently subscribed to the plan's realtime
+  // channel (peer count via Supabase Realtime Presence).
+  const [peerCount, setPeerCount] = useState(0);
 
   // Pending debounced cloud save (per plan id) so rapid edits coalesce.
   const saveTimers = useRef<Map<string, number>>(new Map());
@@ -150,6 +174,137 @@ export function useHivePlan() {
     };
   }, [authLoading, user]);
 
+  // Apply a remote plan update (from the realtime channel) without
+  // triggering our own cloud save. Idempotent: ignores stale updates.
+  const applyRemoteData = useCallback((remotePlan: HivePlan) => {
+    setCurrentPlan((prev) => {
+      if (!prev || prev.id !== remotePlan.id) return prev;
+      if (remotePlan.updatedAt <= prev.updatedAt) return prev;
+      return remotePlan;
+    });
+    setPlans((prev) => {
+      const idx = prev.findIndex((p) => p.id === remotePlan.id);
+      if (idx === -1) return prev;
+      if (remotePlan.updatedAt <= prev[idx].updatedAt) return prev;
+      const next = [...prev];
+      next[idx] = remotePlan;
+      savePlansToStorage(next);
+      return next;
+    });
+  }, []);
+
+  // True iff the local user is currently free to make edits. Either the
+  // plan has no active editor lock, the lock is ours, or the lock has
+  // gone stale and is up for grabs. Read at edit time via the ref so
+  // we always see the latest value without bloating callback deps.
+  const canEditNow = useCallback((): boolean => {
+    if (!user) return false;
+    const ls = lockStateRef.current;
+    if (!ls.editorUserId) return true;
+    if (ls.editorUserId === user.id) return true;
+    if (ls.acquiredAt != null && Date.now() - ls.acquiredAt > LOCK_STALE_MS) return true;
+    return false;
+  }, [user]);
+
+  // Realtime subscription + edit-lock lifecycle, scoped to the current
+  // plan. Acquires the lock on plan-open, heartbeats while held, listens
+  // for other clients' updates, and releases on unmount / plan switch.
+  useEffect(() => {
+    if (!currentPlan?.id || !user?.id) return;
+    const planId = currentPlan.id;
+    const userId = user.id;
+
+    let cancelled = false;
+
+    async function tryAcquire() {
+      try {
+        const result = await acquireEditLock(planId);
+        if (cancelled) return;
+        setLockState({
+          editorUserId: result.editor_user_id,
+          acquiredAt: result.editor_acquired_at
+            ? new Date(result.editor_acquired_at).getTime()
+            : null,
+        });
+      } catch (e) {
+        console.error('[lock] acquire failed:', e);
+      }
+    }
+    void tryAcquire();
+
+    const channel = supabase
+      .channel(`plan:${planId}`, { config: { presence: { key: userId } } })
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'plans',
+          filter: `id=eq.${planId}`,
+        },
+        (payload) => {
+          const row = payload.new as {
+            data: HivePlan;
+            editor_user_id: string | null;
+            editor_acquired_at: string | null;
+          };
+          if (row.data) applyRemoteData(row.data);
+          setLockState({
+            editorUserId: row.editor_user_id,
+            acquiredAt: row.editor_acquired_at
+              ? new Date(row.editor_acquired_at).getTime()
+              : null,
+          });
+        }
+      )
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        // Number of distinct user keys other than us.
+        const others = Object.keys(state).filter((k) => k !== userId);
+        setPeerCount(others.length);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({ joined_at: Date.now() });
+        }
+      });
+
+    const heartbeatTimer = window.setInterval(() => {
+      const ls = lockStateRef.current;
+      if (ls.editorUserId === userId) {
+        heartbeatEditLock(planId).catch(() => {});
+      } else {
+        const stale =
+          ls.acquiredAt != null && Date.now() - ls.acquiredAt > LOCK_STALE_MS;
+        if (!ls.editorUserId || stale) void tryAcquire();
+      }
+    }, HEARTBEAT_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(heartbeatTimer);
+      supabase.removeChannel(channel);
+      if (lockStateRef.current.editorUserId === userId) {
+        releaseEditLock(planId).catch(() => {});
+      }
+      setLockState({ editorUserId: null, acquiredAt: null });
+      setPeerCount(0);
+    };
+  }, [currentPlan?.id, user?.id, applyRemoteData]);
+
+  // Best-effort lock release when the user closes the tab. Browsers
+  // are aggressive about killing in-flight requests on unload, so the
+  // server-side 3-minute stale timeout is the real backstop.
+  useEffect(() => {
+    function onUnload() {
+      if (currentPlan?.id && lockStateRef.current.editorUserId === user?.id) {
+        releaseEditLock(currentPlan.id).catch(() => {});
+      }
+    }
+    window.addEventListener('beforeunload', onUnload);
+    return () => window.removeEventListener('beforeunload', onUnload);
+  }, [currentPlan?.id, user?.id]);
+
   // Debounced cloud upsert per plan, keyed by plan id.
   const scheduleCloudSave = useCallback(
     (plan: HivePlan) => {
@@ -182,10 +337,13 @@ export function useHivePlan() {
     [historyIndex]
   );
 
-  // Update current plan and save (state + localStorage cache + debounced cloud)
+  // Update current plan and save (state + localStorage cache + debounced cloud).
+  // Silently no-ops if another user holds the edit lock — the UI reflects
+  // that the canvas is read-only in that case.
   const updatePlan = useCallback(
     (updates: Partial<HivePlan>) => {
       if (!currentPlan) return;
+      if (!canEditNow()) return;
 
       const updated = {
         ...currentPlan,
@@ -203,7 +361,7 @@ export function useHivePlan() {
 
       scheduleCloudSave(updated);
     },
-    [currentPlan, scheduleCloudSave]
+    [currentPlan, scheduleCloudSave, canEditNow]
   );
 
   // Add building
@@ -461,6 +619,17 @@ export function useHivePlan() {
     setEditorState((prev) => ({ ...prev, showCoords: !prev.showCoords }));
   }, []);
 
+  const hasEditLock = !!(user && lockState.editorUserId === user.id);
+  const otherUserHoldsLock = !!(
+    user &&
+    lockState.editorUserId &&
+    lockState.editorUserId !== user.id
+  );
+  const isLockStale =
+    lockState.acquiredAt != null &&
+    Date.now() - lockState.acquiredAt > LOCK_STALE_MS;
+  const canEdit = !otherUserHoldsLock || isLockStale;
+
   return {
     // State
     plans,
@@ -468,6 +637,14 @@ export function useHivePlan() {
     editorState,
     canUndo: historyIndex >= 0,
     canRedo: historyIndex < history.length - 1,
+
+    // Live-collab state
+    lockState,
+    hasEditLock,
+    otherUserHoldsLock,
+    isLockStale,
+    canEdit,
+    peerCount,
 
     // Building operations
     addBuilding,

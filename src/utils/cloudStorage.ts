@@ -98,3 +98,34 @@ export async function joinPlanByToken(token: string): Promise<JoinResult> {
 
   return data as JoinResult;
 }
+
+export interface LockState {
+  editor_user_id: string | null;
+  editor_acquired_at: string | null;
+  acquired: boolean;
+}
+
+export async function acquireEditLock(planId: string): Promise<LockState> {
+  const { data, error } = await supabase.rpc('acquire_edit_lock', {
+    plan_id_input: planId,
+  });
+  if (error) {
+    console.error('[cloud] acquireEditLock failed:', error);
+    throw error;
+  }
+  return data as LockState;
+}
+
+export async function heartbeatEditLock(planId: string): Promise<void> {
+  const { error } = await supabase.rpc('heartbeat_edit_lock', {
+    plan_id_input: planId,
+  });
+  if (error) console.error('[cloud] heartbeatEditLock failed:', error);
+}
+
+export async function releaseEditLock(planId: string): Promise<void> {
+  const { error } = await supabase.rpc('release_edit_lock', {
+    plan_id_input: planId,
+  });
+  if (error) console.error('[cloud] releaseEditLock failed:', error);
+}

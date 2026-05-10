@@ -12,6 +12,7 @@ import TemplatesModal from './components/Modals/TemplatesModal';
 import HelpModal from './components/Modals/HelpModal';
 import UpgradeModal from './components/Modals/UpgradeModal';
 import ShareModal from './components/Modals/ShareModal';
+import LockIndicator from './components/Toolbar/LockIndicator';
 import { getProStatus } from './utils/pro';
 import { trackSessionStart, trackEvent, Events } from './utils/analytics';
 import './App.css';
@@ -38,7 +39,11 @@ export default function App() {
     toggleGrid,
     toggleCoords,
     undo,
-    redo
+    redo,
+    hasEditLock,
+    otherUserHoldsLock,
+    isLockStale,
+    peerCount,
   } = useHivePlan();
 
   const stageRef = useRef<any>(null);
@@ -144,6 +149,13 @@ export default function App() {
 
   return (
     <div className="app">
+      <LockIndicator
+        hasEditLock={hasEditLock}
+        otherUserHoldsLock={otherUserHoldsLock}
+        isLockStale={isLockStale}
+        hasPeers={peerCount > 0}
+      />
+
       {/* Top Toolbar */}
       <TopToolbar
         planName={currentPlan.name}
