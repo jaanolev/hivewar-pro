@@ -7,29 +7,50 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 14px;
+  padding: 6px 6px 6px 14px;
   border-radius: 999px;
   background: var(--color-surface, #1f2937);
   color: var(--color-text, #f3f4f6);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
-  font-size: 12px;
+  font-size: 13px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   max-width: calc(100vw - 32px);
 }
 
-.lock-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.25;
+.lock-label {
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-.lock-text strong {
-  font-size: 13px;
+.lock-toggle {
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  white-space: nowrap;
 }
 
-.lock-hint {
-  opacity: 0.6;
-  font-size: 11px;
+.lock-toggle:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.lock-editing .lock-toggle {
+  background: rgba(16, 185, 129, 0.25);
+}
+.lock-editing .lock-toggle:hover {
+  background: rgba(16, 185, 129, 0.35);
+}
+
+.lock-watching .lock-toggle {
+  background: rgba(245, 158, 11, 0.25);
+}
+.lock-watching .lock-toggle:hover {
+  background: rgba(245, 158, 11, 0.35);
 }
 
 .lock-dot {
@@ -62,9 +83,12 @@
 @media (max-width: 600px) {
   .lock-indicator {
     top: 56px;
-    font-size: 11px;
-    padding: 6px 12px;
+    font-size: 12px;
+    padding: 4px 4px 4px 12px;
+    gap: 8px;
   }
-  .lock-text strong { font-size: 12px; }
-  .lock-hint { display: none; }
+  .lock-toggle {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
 }

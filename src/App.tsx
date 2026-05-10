@@ -44,6 +44,8 @@ export default function App() {
     otherUserHoldsLock,
     isLockStale,
     peerCount,
+    takeLock,
+    releaseLock,
   } = useHivePlan();
 
   const stageRef = useRef<any>(null);
@@ -154,6 +156,8 @@ export default function App() {
         otherUserHoldsLock={otherUserHoldsLock}
         isLockStale={isLockStale}
         hasPeers={peerCount > 0}
+        onTake={takeLock}
+        onRelease={releaseLock}
       />
 
       {/* Top Toolbar */}

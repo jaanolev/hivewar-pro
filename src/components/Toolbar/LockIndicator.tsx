@@ -5,10 +5,11 @@ interface Props {
   hasEditLock: boolean;
   otherUserHoldsLock: boolean;
   isLockStale: boolean;
-  // True when at least one other user is known to be on this plan.
-  // Used to suppress the indicator in the solo-editor case where it
-  // would just be noise.
+  // True when at least one other user is on this plan. Used to suppress
+  // the indicator entirely in the solo case (no need for a toggle).
   hasPeers: boolean;
+  onTake: () => void;
+  onRelease: () => void;
 }
 
 export default function LockIndicator({
@@ -16,9 +17,11 @@ export default function LockIndicator({
   otherUserHoldsLock,
   isLockStale,
   hasPeers,
+  onTake,
+  onRelease,
 }: Props) {
-  // Tick a clock so "x seconds ago" stale countdowns refresh without
-  // bloating the render cycle.
+  // Tick a clock so any "x ago" relative timestamps refresh without
+  // bloating the parent's render cycle.
   const [, setTick] = useState(0);
   useEffect(() => {
     if (!otherUserHoldsLock) return;
@@ -26,34 +29,39 @@ export default function LockIndicator({
     return () => window.clearInterval(id);
   }, [otherUserHoldsLock]);
 
-  // Solo user editing their own plan — quiet pill, no indicator.
-  if (!hasPeers && hasEditLock && !otherUserHoldsLock) return null;
+  // Solo: nothing to coordinate, hide the pill.
+  if (!hasPeers) return null;
 
   let kind: 'editing' | 'watching' | 'available';
   let label: string;
-  let hint: string;
+  let action: string;
 
   if (hasEditLock) {
     kind = 'editing';
     label = "You're editing";
-    hint = 'Your changes sync live to everyone with the link.';
+    action = 'Stop editing';
   } else if (otherUserHoldsLock && !isLockStale) {
     kind = 'watching';
     label = 'Someone else is editing';
-    hint = 'Watch live. The lock auto-releases after 3 min of no activity.';
+    action = 'Take over';
   } else {
     kind = 'available';
-    label = 'Available';
-    hint = 'No active editor. Start editing to take the lock.';
+    label = 'No active editor';
+    action = 'Start editing';
+  }
+
+  function handleClick() {
+    if (hasEditLock) onRelease();
+    else onTake();
   }
 
   return (
     <div className={`lock-indicator lock-${kind}`} role="status">
       <span className="lock-dot" aria-hidden="true" />
-      <div className="lock-text">
-        <strong>{label}</strong>
-        <span className="lock-hint">{hint}</span>
-      </div>
+      <strong className="lock-label">{label}</strong>
+      <button className="lock-toggle" onClick={handleClick} type="button">
+        {action}
+      </button>
     </div>
   );
 }

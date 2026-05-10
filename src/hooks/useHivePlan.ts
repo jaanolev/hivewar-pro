@@ -18,6 +18,7 @@ import {
   acquireEditLock,
   heartbeatEditLock,
   releaseEditLock,
+  takeEditLock,
 } from '../utils/cloudStorage';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
@@ -630,6 +631,34 @@ export function useHivePlan() {
     Date.now() - lockState.acquiredAt > LOCK_STALE_MS;
   const canEdit = !otherUserHoldsLock || isLockStale;
 
+  // User-driven toggle: explicitly take the lock from whoever currently
+  // has it (no waiting for the holder to go stale). Pairs with releaseLock
+  // to make a single "I'm editing" toggle in the UI.
+  const takeLock = useCallback(async () => {
+    if (!currentPlan) return;
+    try {
+      const result = await takeEditLock(currentPlan.id);
+      setLockState({
+        editorUserId: result.editor_user_id,
+        acquiredAt: result.editor_acquired_at
+          ? new Date(result.editor_acquired_at).getTime()
+          : null,
+      });
+    } catch (e) {
+      console.error('[lock] take failed:', e);
+    }
+  }, [currentPlan]);
+
+  const releaseLock = useCallback(async () => {
+    if (!currentPlan) return;
+    try {
+      await releaseEditLock(currentPlan.id);
+      setLockState({ editorUserId: null, acquiredAt: null });
+    } catch (e) {
+      console.error('[lock] release failed:', e);
+    }
+  }, [currentPlan]);
+
   return {
     // State
     plans,
@@ -645,6 +674,8 @@ export function useHivePlan() {
     isLockStale,
     canEdit,
     peerCount,
+    takeLock,
+    releaseLock,
 
     // Building operations
     addBuilding,
