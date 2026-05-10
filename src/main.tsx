@@ -5,6 +5,7 @@ import App from './App.tsx'
 import AdminDashboard from './pages/AdminDashboard.tsx'
 import LandingPage from './pages/LandingPage.tsx'
 import { AuthProvider } from './lib/auth.tsx'
+import AccountMenu from './components/Toolbar/AccountMenu.tsx'
 
 // Simple hash-based routing
 function Router() {
@@ -28,6 +29,7 @@ function Root() {
     <StrictMode>
       <AuthProvider>
         <Router />
+        <AccountMenu />
       </AuthProvider>
     </StrictMode>
   );

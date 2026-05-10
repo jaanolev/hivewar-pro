@@ -1,0 +1,146 @@
+.account-menu {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 1100;
+}
+
+.account-trigger {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-surface, #1f2937);
+  color: var(--color-text, #f3f4f6);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  padding: 0;
+  overflow: visible;
+}
+
+.account-trigger:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.account-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.account-avatar-initial {
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.account-pulse {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f59e0b;
+  border: 2px solid var(--color-surface, #1f2937);
+  animation: account-pulse 2s ease-in-out infinite;
+}
+
+@keyframes account-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.85; }
+}
+
+.account-popover {
+  position: absolute;
+  top: 48px;
+  right: 0;
+  width: 260px;
+  background: var(--color-surface, #1f2937);
+  color: var(--color-text, #f3f4f6);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.account-popover-header {
+  padding: 6px 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 4px;
+}
+
+.account-popover-header strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.account-popover-header p {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.7;
+  line-height: 1.4;
+}
+
+.account-email {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.account-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text, #f3f4f6);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.account-action:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.account-action-discord {
+  background: #5865f2;
+  color: #fff;
+}
+
+.account-action-discord:hover {
+  background: #4752c4;
+}
+
+.account-action-google {
+  background: #fff;
+  color: #1f2937;
+}
+
+.account-action-google:hover {
+  background: #e5e7eb;
+}
+
+@media (max-width: 600px) {
+  .account-menu {
+    top: 8px;
+    right: 8px;
+  }
+  .account-popover {
+    width: calc(100vw - 24px);
+    max-width: 280px;
+  }
+}

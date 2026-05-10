@@ -70,24 +70,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const redirectTo = window.location.origin + window.location.pathname;
+  const isAnonymous = session?.user?.is_anonymous ?? false;
+
+  // If the user already has an anonymous session, link the new identity
+  // to that user so their existing plans carry over. Otherwise (no session
+  // or signed-out) do a fresh OAuth sign-in.
+  async function authenticateWith(provider: 'discord' | 'google') {
+    if (session && isAnonymous) {
+      const { error } = await supabase.auth.linkIdentity({
+        provider,
+        options: { redirectTo },
+      });
+      if (error) {
+        console.error(`[auth] linkIdentity(${provider}) failed:`, error);
+        throw error;
+      }
+      return;
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo },
+    });
+    if (error) {
+      console.error(`[auth] signInWithOAuth(${provider}) failed:`, error);
+      throw error;
+    }
+  }
 
   const value: AuthContextValue = {
     user: session?.user ?? null,
     session,
-    isAnonymous: session?.user?.is_anonymous ?? false,
+    isAnonymous,
     loading,
-    signInWithDiscord: async () => {
-      await supabase.auth.signInWithOAuth({
-        provider: 'discord',
-        options: { redirectTo },
-      });
-    },
-    signInWithGoogle: async () => {
-      await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo },
-      });
-    },
+    signInWithDiscord: () => authenticateWith('discord'),
+    signInWithGoogle: () => authenticateWith('google'),
     signOut: async () => {
       await supabase.auth.signOut();
     },
