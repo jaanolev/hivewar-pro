@@ -1,0 +1,40 @@
+.sharehub-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px 0;
+}
+
+.sharehub-tab {
+  flex: 1;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px 10px 0 0;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text, #f3f4f6);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  border-bottom: 2px solid transparent;
+}
+
+.sharehub-tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sharehub-tab.active {
+  background: rgba(99, 102, 241, 0.16);
+  border-bottom-color: #6366f1;
+}
+
+.share-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 500px) {
+  .sharehub-tab {
+    font-size: 12px;
+    padding: 9px 8px;
+  }
+}

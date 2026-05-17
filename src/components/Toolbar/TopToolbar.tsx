@@ -131,13 +131,21 @@ export default function TopToolbar({
         <button className="action-btn" onClick={onSave} title="Save">
           <span className="btn-icon">💾</span>
         </button>
-        <button className="action-btn primary" onClick={onExport} title="Export PNG">
+        <button
+          className="action-btn primary"
+          onClick={onExport}
+          title="Export image, CSV, JSON or snapshot link"
+        >
           <span className="btn-icon">📷</span>
           <span className="btn-label">Export</span>
         </button>
-        <button className="action-btn accent" onClick={onShare} title="Share Link">
-          <span className="btn-icon">🔗</span>
-          <span className="btn-label">Share</span>
+        <button
+          className="action-btn accent"
+          onClick={onShare}
+          title="Edit this plan live with your alliance"
+        >
+          <span className="btn-icon">👥</span>
+          <span className="btn-label">Collaborate</span>
         </button>
       </div>
     </div>

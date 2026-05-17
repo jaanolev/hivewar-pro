@@ -1,8 +1,44 @@
 .account-menu {
   position: fixed;
-  top: 12px;
-  right: 12px;
+  top: 13px;
+  right: 14px;
   z-index: 1100;
+}
+
+.account-signin {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.45);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.account-signin:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.55);
+}
+
+.account-signin-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+@media (max-width: 600px) {
+  .account-signin-label {
+    display: none;
+  }
+  .account-signin {
+    padding: 0 10px;
+  }
 }
 
 .account-trigger {

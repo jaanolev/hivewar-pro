@@ -186,8 +186,7 @@ input:focus-visible {
 /* Common FAB Styles */
 .help-fab,
 .upgrade-fab,
-.pro-fab,
-.live-share-fab {
+.pro-fab {
   width: 48px;
   height: 48px;
   border-radius: 50%;
@@ -204,16 +203,6 @@ input:focus-visible {
 .help-fab {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
-}
-
-.live-share-fab {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
-}
-
-.live-share-fab:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(16, 185, 129, 0.5);
 }
 
 .upgrade-fab {

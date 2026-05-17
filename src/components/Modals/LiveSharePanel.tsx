@@ -5,11 +5,10 @@ import './ShareModal.css';
 
 interface Props {
   planId: string;
-  planName: string;
-  onClose: () => void;
 }
 
-export default function ShareModal({ planId, planName, onClose }: Props) {
+// Live-collaboration tab body. Lives inside ShareHub's tabbed shell.
+export default function LiveSharePanel({ planId }: Props) {
   const [tokens, setTokens] = useState<ShareTokens | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +27,7 @@ export default function ShareModal({ planId, planName, onClose }: Props) {
         const raw = e instanceof Error ? e.message : 'Failed to create share link.';
         setError(
           raw.toLowerCase().includes('owner')
-            ? "Only the plan's owner can create share links. Ask the original creator to share the link with you."
+            ? "Only the plan's owner can create share links. Ask whoever created this plan to send you the link."
             : raw
         );
       } finally {
@@ -46,43 +45,33 @@ export default function ShareModal({ planId, planName, onClose }: Props) {
   const viewUrl = tokens ? `${baseUrl}?view=${tokens.view_token}` : '';
 
   return (
-    <div className="share-modal-backdrop" onClick={onClose}>
-      <div className="share-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="share-modal-header">
-          <h2>Live share</h2>
-          <button className="share-modal-close" onClick={onClose} aria-label="Close">
-            ×
-          </button>
-        </div>
-        <p className="share-modal-subtitle">{planName}</p>
+    <div className="share-panel">
+      {loading && <p className="share-modal-loading">Generating links…</p>}
 
-        {loading && <p className="share-modal-loading">Generating links…</p>}
+      {error && <div className="share-modal-error">{error}</div>}
 
-        {error && <div className="share-modal-error">{error}</div>}
+      {tokens && !loading && !error && (
+        <>
+          <p className="share-modal-explain">
+            Send a link to your alliance and edit the same hive together in
+            real time. Only one person edits at a time — everyone else sees
+            changes live and can take over with one click.
+          </p>
 
-        {tokens && !loading && !error && (
-          <>
-            <p className="share-modal-explain">
-              Anyone with these links sees your plan in real time. Only one
-              person can edit at a time — others see live updates but can't
-              make changes until the editor steps back.
-            </p>
-
-            <ShareLinkRow
-              label="Edit link"
-              hint="Recipient can take edit access. Best for alliance teammates."
-              url={editUrl}
-              variant="edit"
-            />
-            <ShareLinkRow
-              label="View link"
-              hint="Recipient can only watch. Safe to share publicly."
-              url={viewUrl}
-              variant="view"
-            />
-          </>
-        )}
-      </div>
+          <ShareLinkRow
+            label="Edit link"
+            hint="Teammates can take edit access and change the layout."
+            url={editUrl}
+            variant="edit"
+          />
+          <ShareLinkRow
+            label="View-only link"
+            hint="Recipients watch live but can't change anything. Safe to post publicly."
+            url={viewUrl}
+            variant="view"
+          />
+        </>
+      )}
     </div>
   );
 }

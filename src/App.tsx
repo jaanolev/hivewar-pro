@@ -6,12 +6,11 @@ import HiveGrid from './components/Grid/HiveGrid';
 import TopToolbar from './components/Toolbar/TopToolbar';
 import BuildingPalette from './components/Toolbar/BuildingPalette';
 import PropertyPanel from './components/Panel/PropertyPanel';
-import ExportModal from './components/Modals/ExportModal';
 import MenuModal from './components/Modals/MenuModal';
 import TemplatesModal from './components/Modals/TemplatesModal';
 import HelpModal from './components/Modals/HelpModal';
 import UpgradeModal from './components/Modals/UpgradeModal';
-import ShareModal from './components/Modals/ShareModal';
+import ShareHub, { type ShareTab } from './components/Modals/ShareHub';
 import LockIndicator from './components/Toolbar/LockIndicator';
 import { getProStatus } from './utils/pro';
 import { trackSessionStart, trackEvent, Events } from './utils/analytics';
@@ -51,12 +50,11 @@ export default function App() {
 
   const stageRef = useRef<any>(null);
   const [paletteOpen, setPaletteOpen] = useState(true);
-  const [showExportModal, setShowExportModal] = useState(false);
+  const [shareTab, setShareTab] = useState<ShareTab | null>(null);
   const [showMenuModal, setShowMenuModal] = useState(false);
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [showLiveShareModal, setShowLiveShareModal] = useState(false);
   
   // Pro status - read from localStorage
   const [isPro, setIsPro] = useState(() => getProStatus().isPro);
@@ -177,8 +175,8 @@ export default function App() {
             clearBuildings();
           }
         }}
-        onExport={() => setShowExportModal(true)}
-        onShare={() => setShowExportModal(true)}
+        onExport={() => setShareTab('export')}
+        onShare={() => setShareTab('collaborate')}
         onSave={() => {
           // Plans auto-save, but show feedback
           alert('Plan saved! ✓');
@@ -226,14 +224,15 @@ export default function App() {
         />
       )}
 
-      {/* Export Modal */}
-      {showExportModal && (
-        <ExportModal
+      {/* Share hub (live collab + export/snapshot) */}
+      {shareTab && currentPlan && (
+        <ShareHub
           plan={currentPlan}
           stageRef={stageRef}
-          onClose={() => setShowExportModal(false)}
-          onUpgrade={() => setShowUpgradeModal(true)}
+          initialTab={shareTab}
           isPro={isPro}
+          onUpgrade={() => setShowUpgradeModal(true)}
+          onClose={() => setShareTab(null)}
         />
       )}
 
@@ -274,15 +273,6 @@ export default function App() {
         onProStatusChange={setIsPro}
       />
 
-      {/* Live Share Modal */}
-      {showLiveShareModal && currentPlan && (
-        <ShareModal
-          planId={currentPlan.id}
-          planName={currentPlan.name}
-          onClose={() => setShowLiveShareModal(false)}
-        />
-      )}
-
       {/* Floating Buttons */}
       <div className="floating-buttons">
         {/* Pro Badge or Upgrade Button */}
@@ -307,15 +297,6 @@ export default function App() {
           </button>
         )}
         
-        {/* Live Share Button */}
-        <button
-          className="live-share-fab"
-          onClick={() => setShowLiveShareModal(true)}
-          title="Live share with alliance"
-        >
-          🔗
-        </button>
-
         {/* Help Button */}
         <button
           className="help-fab"

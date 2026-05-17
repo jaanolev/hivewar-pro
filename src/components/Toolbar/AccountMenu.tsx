@@ -47,18 +47,30 @@ export default function AccountMenu() {
 
   return (
     <div className="account-menu" ref={ref}>
-      <button
-        className="account-trigger"
-        onClick={() => setOpen((o) => !o)}
-        title={isAnonymous ? 'Sign in to sync plans across devices' : displayName}
-      >
-        {avatarUrl ? (
-          <img src={avatarUrl} alt="" className="account-avatar-img" />
-        ) : (
-          <span className="account-avatar-initial">{isAnonymous ? '?' : initial}</span>
-        )}
-        {isAnonymous && <span className="account-pulse" aria-hidden="true" />}
-      </button>
+      {isAnonymous ? (
+        <button
+          className="account-signin"
+          onClick={() => setOpen((o) => !o)}
+          title="Sign in to sync your plans across devices"
+        >
+          <span className="account-signin-icon" aria-hidden="true">
+            👤
+          </span>
+          <span className="account-signin-label">Sign in</span>
+        </button>
+      ) : (
+        <button
+          className="account-trigger"
+          onClick={() => setOpen((o) => !o)}
+          title={displayName}
+        >
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="" className="account-avatar-img" />
+          ) : (
+            <span className="account-avatar-initial">{initial}</span>
+          )}
+        </button>
+      )}
 
       {open && (
         <div className="account-popover" role="dialog">
