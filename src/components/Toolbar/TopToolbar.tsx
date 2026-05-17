@@ -81,18 +81,18 @@ export default function TopToolbar({
 
         <div className="divider" />
 
-        <div className="tool-group">
-          <button 
-            className="tool-btn" 
-            onClick={onUndo} 
+        <div className="tool-group tool-group--history">
+          <button
+            className="tool-btn"
+            onClick={onUndo}
             disabled={!canUndo}
             title="Undo"
           >
             ↩️
           </button>
-          <button 
-            className="tool-btn" 
-            onClick={onRedo} 
+          <button
+            className="tool-btn"
+            onClick={onRedo}
             disabled={!canRedo}
             title="Redo"
           >
@@ -102,15 +102,15 @@ export default function TopToolbar({
 
         <div className="divider" />
 
-        <div className="tool-group">
-          <button 
+        <div className="tool-group tool-group--view">
+          <button
             className={`tool-btn ${showGrid ? 'active' : ''}`}
             onClick={onToggleGrid}
             title="Toggle Grid"
           >
             #
           </button>
-          <button 
+          <button
             className={`tool-btn ${showCoords ? 'active' : ''}`}
             onClick={onToggleCoords}
             title="Toggle Coordinates"
@@ -128,7 +128,7 @@ export default function TopToolbar({
         <button className="action-btn danger" onClick={onClear} title="Clear All">
           <span className="btn-icon">🗑️</span>
         </button>
-        <button className="action-btn" onClick={onSave} title="Save">
+        <button className="action-btn action-btn--save" onClick={onSave} title="Save">
           <span className="btn-icon">💾</span>
         </button>
         <button

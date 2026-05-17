@@ -747,3 +747,71 @@
     font-size: 12px;
   }
 }
+
+/* Mobile-only editor controls inside the ☰ menu. Hidden on desktop
+   where these live in the top toolbar. */
+.menu-editor-controls {
+  display: none;
+}
+
+.menu-editor-controls h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.menu-control-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.menu-control-grid button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text, #f3f4f6);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.menu-control-grid button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.menu-control-grid button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.menu-control-grid button.active {
+  background: rgba(99, 102, 241, 0.22);
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+.menu-control-grid .menu-control-danger {
+  grid-column: 1 / -1;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.menu-control-grid .menu-control-danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+@media (max-width: 768px) {
+  .menu-editor-controls {
+    display: block;
+  }
+}

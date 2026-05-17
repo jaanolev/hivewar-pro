@@ -250,8 +250,20 @@
 
   .toolbar-right {
     gap: 4px;
-    /* On mobile the Sign-in pill collapses to an icon (~44px). */
-    margin-right: 52px;
+    /* Only Export + Collaborate remain here on mobile; reserve room for
+       the fixed account icon (~44px) so they don't sit under it. */
+    margin-right: 50px;
+  }
+
+  /* Mobile: trim the bar to essentials. Undo/redo, grid/coords,
+     Templates, Save and Clear move into the ☰ menu so the headline
+     actions (Export, Collaborate) fit and stay reachable. */
+  .tool-group--history,
+  .tool-group--view,
+  .action-btn.templates,
+  .action-btn.danger,
+  .action-btn--save {
+    display: none;
   }
 
   .menu-btn {

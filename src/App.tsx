@@ -247,6 +247,23 @@ export default function App() {
           onRenamePlan={(name) => updatePlan({ name })}
           onImportPlan={handleImportPlan}
           onClose={() => setShowMenuModal(false)}
+          editorControls={{
+            canUndo,
+            canRedo,
+            showGrid: editorState.showGrid,
+            showCoords: editorState.showCoords,
+            onUndo: undo,
+            onRedo: redo,
+            onToggleGrid: toggleGrid,
+            onToggleCoords: toggleCoords,
+            onTemplates: () => setShowTemplatesModal(true),
+            onClear: () => {
+              if (confirm('Clear all buildings? This cannot be undone.')) {
+                clearBuildings();
+              }
+            },
+            onSave: () => alert('Plan saved! ✓'),
+          }}
         />
       )}
 

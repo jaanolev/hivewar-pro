@@ -3,6 +3,20 @@ import type { HivePlan } from '../../types';
 import { importPlanFromJson } from '../../utils/storage';
 import './Modal.css';
 
+export interface MenuEditorControls {
+  canUndo: boolean;
+  canRedo: boolean;
+  showGrid: boolean;
+  showCoords: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
+  onToggleGrid: () => void;
+  onToggleCoords: () => void;
+  onTemplates: () => void;
+  onClear: () => void;
+  onSave: () => void;
+}
+
 interface MenuModalProps {
   plans: HivePlan[];
   currentPlanId: string;
@@ -12,6 +26,7 @@ interface MenuModalProps {
   onRenamePlan: (name: string) => void;
   onImportPlan: (plan: HivePlan) => void;
   onClose: () => void;
+  editorControls: MenuEditorControls;
 }
 
 export default function MenuModal({
@@ -22,7 +37,8 @@ export default function MenuModal({
   onDeletePlan,
   onRenamePlan,
   onImportPlan,
-  onClose
+  onClose,
+  editorControls,
 }: MenuModalProps) {
   const [newPlanName, setNewPlanName] = useState('');
   const [showNewForm, setShowNewForm] = useState(false);
@@ -74,6 +90,48 @@ export default function MenuModal({
         </div>
 
         <div className="modal-body">
+          {/* Mobile-only: editor controls that don't fit in the slim
+              phone toolbar (hidden on desktop via CSS). */}
+          <div className="menu-editor-controls">
+            <h4>Editor</h4>
+            <div className="menu-control-grid">
+              <button
+                onClick={() => { editorControls.onUndo(); }}
+                disabled={!editorControls.canUndo}
+              >
+                ↩️ Undo
+              </button>
+              <button
+                onClick={() => { editorControls.onRedo(); }}
+                disabled={!editorControls.canRedo}
+              >
+                ↪️ Redo
+              </button>
+              <button
+                className={editorControls.showGrid ? 'active' : ''}
+                onClick={editorControls.onToggleGrid}
+              >
+                # Grid
+              </button>
+              <button
+                className={editorControls.showCoords ? 'active' : ''}
+                onClick={editorControls.onToggleCoords}
+              >
+                📍 Coords
+              </button>
+              <button onClick={() => { onClose(); editorControls.onTemplates(); }}>
+                📋 Templates
+              </button>
+              <button onClick={editorControls.onSave}>💾 Save</button>
+              <button
+                className="menu-control-danger"
+                onClick={editorControls.onClear}
+              >
+                🗑️ Clear all
+              </button>
+            </div>
+          </div>
+
           {/* Current plan actions */}
           {currentPlan && (
             <div className="current-plan-section">
