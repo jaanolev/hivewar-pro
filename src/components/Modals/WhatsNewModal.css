@@ -1,0 +1,75 @@
+.whatsnew-modal {
+  max-width: 460px;
+}
+
+.whatsnew-intro {
+  margin: 0 0 16px;
+  font-size: 14px;
+  opacity: 0.75;
+}
+
+.whatsnew-feature {
+  display: flex;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  margin-bottom: 12px;
+}
+
+.whatsnew-icon {
+  font-size: 26px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.whatsnew-feature strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.whatsnew-feature p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 0.7;
+}
+
+.whatsnew-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.whatsnew-primary,
+.whatsnew-secondary {
+  padding: 13px 16px;
+  border-radius: 10px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s ease, background 0.15s ease;
+}
+
+.whatsnew-primary {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+}
+
+.whatsnew-primary:hover {
+  filter: brightness(1.08);
+}
+
+.whatsnew-secondary {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text, #f3f4f6);
+}
+
+.whatsnew-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+}

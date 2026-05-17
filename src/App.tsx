@@ -11,10 +11,14 @@ import TemplatesModal from './components/Modals/TemplatesModal';
 import HelpModal from './components/Modals/HelpModal';
 import UpgradeModal from './components/Modals/UpgradeModal';
 import ShareHub, { type ShareTab } from './components/Modals/ShareHub';
+import WhatsNewModal from './components/Modals/WhatsNewModal';
 import LockIndicator from './components/Toolbar/LockIndicator';
 import { getProStatus } from './utils/pro';
 import { trackSessionStart, trackEvent, Events } from './utils/analytics';
 import './App.css';
+
+// Bump the suffix to re-announce when there's a new round of features.
+const WHATS_NEW_KEY = 'hivewar-whatsnew-v1';
 
 export default function App() {
   const {
@@ -55,6 +59,14 @@ export default function App() {
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showWhatsNew, setShowWhatsNew] = useState(
+    () => !localStorage.getItem(WHATS_NEW_KEY)
+  );
+
+  const dismissWhatsNew = () => {
+    localStorage.setItem(WHATS_NEW_KEY, '1');
+    setShowWhatsNew(false);
+  };
   
   // Pro status - read from localStorage
   const [isPro, setIsPro] = useState(() => getProStatus().isPro);
@@ -233,6 +245,17 @@ export default function App() {
           isPro={isPro}
           onUpgrade={() => setShowUpgradeModal(true)}
           onClose={() => setShareTab(null)}
+        />
+      )}
+
+      {/* One-time "what's new" announcement */}
+      {showWhatsNew && currentPlan && !shareTab && (
+        <WhatsNewModal
+          onClose={dismissWhatsNew}
+          onTryCollab={() => {
+            dismissWhatsNew();
+            setShareTab('collaborate');
+          }}
         />
       )}
 
