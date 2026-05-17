@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import type { HivePlan } from '../../types';
 import { importPlanFromJson } from '../../utils/storage';
+import { useDragDismiss } from '../../hooks/useDragDismiss';
 import './Modal.css';
 
 export interface MenuEditorControls {
@@ -47,6 +48,7 @@ export default function MenuModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const currentPlan = plans.find(p => p.id === currentPlanId);
+  const { dragHandlers, sheetStyle } = useDragDismiss(onClose);
 
   const handleCreate = () => {
     if (newPlanName.trim()) {
@@ -83,8 +85,12 @@ export default function MenuModal({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content menu-modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
+      <div
+        className="modal-content menu-modal"
+        style={sheetStyle}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="modal-header" {...dragHandlers}>
           <h2>🗂️ My Hive Plans</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>

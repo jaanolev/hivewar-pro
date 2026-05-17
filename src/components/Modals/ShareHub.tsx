@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { HivePlan } from '../../types';
 import ExportPanel from './ExportPanel';
 import LiveSharePanel from './LiveSharePanel';
+import { useDragDismiss } from '../../hooks/useDragDismiss';
 import './Modal.css';
 import './ShareHub.css';
 
@@ -25,11 +26,16 @@ export default function ShareHub({
   onClose,
 }: Props) {
   const [tab, setTab] = useState<ShareTab>(initialTab);
+  const { dragHandlers, sheetStyle } = useDragDismiss(onClose);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
+      <div
+        className="modal-content"
+        style={sheetStyle}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-header" {...dragHandlers}>
           <h2>Share “{plan.name}”</h2>
           <button className="modal-close" onClick={onClose} aria-label="Close">
             ✕
