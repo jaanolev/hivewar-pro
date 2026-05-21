@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getOrCreateShareTokens, type ShareTokens } from '../../utils/cloudStorage';
 import { copyToClipboard } from '../../utils/storage';
+import { trackEvent, Events } from '../../utils/analytics';
 import './ShareModal.css';
 
 interface Props {
@@ -93,6 +94,7 @@ function ShareLinkRow({
     const ok = await copyToClipboard(url);
     if (ok) {
       setCopied(true);
+      trackEvent(Events.COLLAB_LINK_COPIED, { type: variant });
       setTimeout(() => setCopied(false), 1500);
     }
   }

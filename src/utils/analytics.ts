@@ -118,6 +118,12 @@ export const Events = {
   EXPORT_JSON: 'export_json',
   EXPORT_CSV: 'export_csv',
   SHARE_LINK_COPIED: 'share_link_copied',
+
+  // Live collaboration funnel
+  COLLABORATE_OPENED: 'collaborate_opened',     // opened the Collaborate tab (intent)
+  COLLAB_LINK_COPIED: 'collab_link_copied',     // copied an edit/view link (sharing)
+  JOINED_VIA_LINK: 'joined_via_link',           // arrived through a share link (recipient)
+  COLLAB_EDIT_LOCK_TAKEN: 'collab_edit_lock_taken', // actively took the editing lock
   
   // Plan actions
   PLAN_CREATED: 'plan_created',

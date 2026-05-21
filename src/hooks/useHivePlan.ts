@@ -22,6 +22,7 @@ import {
 } from '../utils/cloudStorage';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
+import { trackEvent, Events } from '../utils/analytics';
 
 const MIGRATED_KEY = 'hivewar-migrated-to-cloud';
 const SAVE_DEBOUNCE_MS = 500;
@@ -83,6 +84,7 @@ export function useHivePlan() {
           const result = await joinPlanByToken(collabToken);
           if (cancelled) return;
           joinedPlanId = result.plan_id;
+          trackEvent(Events.JOINED_VIA_LINK, { role: result.role });
           params.delete('share');
           params.delete('view');
           const newSearch = params.toString();
@@ -638,6 +640,7 @@ export function useHivePlan() {
     if (!currentPlan) return;
     try {
       const result = await takeEditLock(currentPlan.id);
+      trackEvent(Events.COLLAB_EDIT_LOCK_TAKEN);
       setLockState({
         editorUserId: result.editor_user_id,
         acquiredAt: result.editor_acquired_at

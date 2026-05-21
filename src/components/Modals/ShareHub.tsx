@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { HivePlan } from '../../types';
 import ExportPanel from './ExportPanel';
 import LiveSharePanel from './LiveSharePanel';
 import { useDragDismiss } from '../../hooks/useDragDismiss';
+import { trackEvent, Events } from '../../utils/analytics';
 import './Modal.css';
 import './ShareHub.css';
 
@@ -27,6 +28,10 @@ export default function ShareHub({
 }: Props) {
   const [tab, setTab] = useState<ShareTab>(initialTab);
   const { dragHandlers, sheetStyle } = useDragDismiss(onClose);
+
+  useEffect(() => {
+    if (tab === 'collaborate') trackEvent(Events.COLLABORATE_OPENED);
+  }, [tab]);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
