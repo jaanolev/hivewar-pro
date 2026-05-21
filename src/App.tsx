@@ -12,6 +12,7 @@ import HelpModal from './components/Modals/HelpModal';
 import UpgradeModal from './components/Modals/UpgradeModal';
 import ShareHub, { type ShareTab } from './components/Modals/ShareHub';
 import WhatsNewModal from './components/Modals/WhatsNewModal';
+import OnboardingModal from './components/Modals/OnboardingModal';
 import LockIndicator from './components/Toolbar/LockIndicator';
 import { getProStatus } from './utils/pro';
 import { trackSessionStart, trackEvent, Events } from './utils/analytics';
@@ -19,6 +20,8 @@ import './App.css';
 
 // Bump the suffix to re-announce when there's a new round of features.
 const WHATS_NEW_KEY = 'hivewar-whatsnew-v1';
+// First-run onboarding shown once to brand-new users.
+const ONBOARDING_KEY = 'hivewar-onboarded-v1';
 
 export default function App() {
   const {
@@ -62,9 +65,19 @@ export default function App() {
   const [showWhatsNew, setShowWhatsNew] = useState(
     () => !localStorage.getItem(WHATS_NEW_KEY)
   );
+  const [onboarded, setOnboarded] = useState(
+    () => !!localStorage.getItem(ONBOARDING_KEY)
+  );
 
   const dismissWhatsNew = () => {
     localStorage.setItem(WHATS_NEW_KEY, '1');
+    setShowWhatsNew(false);
+  };
+
+  const finishOnboarding = () => {
+    localStorage.setItem(ONBOARDING_KEY, '1');
+    localStorage.setItem(WHATS_NEW_KEY, '1'); // new users don't need the "what's new" recap
+    setOnboarded(true);
     setShowWhatsNew(false);
   };
   
@@ -160,6 +173,8 @@ export default function App() {
     );
   }
 
+  const showOnboarding = !onboarded && currentPlan.buildings.length === 0 && !shareTab;
+
   return (
     <div className="app">
       <LockIndicator
@@ -248,8 +263,19 @@ export default function App() {
         />
       )}
 
-      {/* One-time "what's new" announcement */}
-      {showWhatsNew && currentPlan && !shareTab && (
+      {/* First-run onboarding for brand-new users (empty plan, never onboarded) */}
+      {showOnboarding && (
+        <OnboardingModal
+          onStartFromTemplate={() => {
+            finishOnboarding();
+            setShowTemplatesModal(true);
+          }}
+          onStartBlank={finishOnboarding}
+        />
+      )}
+
+      {/* One-time "what's new" announcement (yields to first-run onboarding) */}
+      {showWhatsNew && !showOnboarding && currentPlan && !shareTab && (
         <WhatsNewModal
           onClose={dismissWhatsNew}
           onTryCollab={() => {

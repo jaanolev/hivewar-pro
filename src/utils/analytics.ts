@@ -140,6 +140,10 @@ export const Events = {
   // Engagement
   HELP_OPENED: 'help_opened',
   EXPORT_LIMIT_HIT: 'export_limit_hit',
+
+  // First-run onboarding (activation funnel)
+  ONBOARDING_SHOWN: 'onboarding_shown',
+  ONBOARDING_CHOICE: 'onboarding_choice',
 };
 
 // Generate daily report

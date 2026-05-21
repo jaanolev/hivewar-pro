@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { HiveTemplate } from '../../data/templates';
 import { HIVE_TEMPLATES, TEMPLATE_CATEGORIES } from '../../data/templates';
+import { trackEvent, Events } from '../../utils/analytics';
 import './Modal.css';
 import './TemplatesModal.css';
 
@@ -19,6 +20,10 @@ export default function TemplatesModal({
 }: TemplatesModalProps) {
   const [activeCategory, setActiveCategory] = useState<string>('defense');
   const [selectedTemplate, setSelectedTemplate] = useState<HiveTemplate | null>(null);
+
+  useEffect(() => {
+    trackEvent(Events.TEMPLATE_VIEWED);
+  }, []);
 
   const filteredTemplates = HIVE_TEMPLATES.filter(t => t.category === activeCategory);
 
