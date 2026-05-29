@@ -7,6 +7,21 @@ import {
 } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { trackEvent, Events } from '../utils/analytics';
+
+// Set when a user kicks off Discord/Google auth, read after the OAuth
+// redirect lands back on the app so we count exactly one registration per
+// completed sign-in (returning users never have this flag set).
+const PENDING_AUTH_KEY = 'hivewar_pending_auth';
+
+function trackRegistrationIfPending(session: Session | null) {
+  const user = session?.user;
+  if (!user || user.is_anonymous) return;
+  const provider = sessionStorage.getItem(PENDING_AUTH_KEY);
+  if (!provider) return;
+  sessionStorage.removeItem(PENDING_AUTH_KEY);
+  trackEvent(Events.SIGN_UP, { provider });
+}
 
 interface AuthContextValue {
   user: User | null;
@@ -34,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
 
       if (existing) {
+        trackRegistrationIfPending(existing);
         setSession(existing);
         setLoading(false);
         return;
@@ -60,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      trackRegistrationIfPending(newSession);
       setSession(newSession);
     });
 
@@ -76,12 +93,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // to that user so their existing plans carry over. Otherwise (no session
   // or signed-out) do a fresh OAuth sign-in.
   async function authenticateWith(provider: 'discord' | 'google') {
+    sessionStorage.setItem(PENDING_AUTH_KEY, provider);
+
     if (session && isAnonymous) {
       const { error } = await supabase.auth.linkIdentity({
         provider,
         options: { redirectTo },
       });
       if (error) {
+        sessionStorage.removeItem(PENDING_AUTH_KEY);
         console.error(`[auth] linkIdentity(${provider}) failed:`, error);
         throw error;
       }
@@ -93,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       options: { redirectTo },
     });
     if (error) {
+      sessionStorage.removeItem(PENDING_AUTH_KEY);
       console.error(`[auth] signInWithOAuth(${provider}) failed:`, error);
       throw error;
     }

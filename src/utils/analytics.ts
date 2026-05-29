@@ -144,6 +144,9 @@ export const Events = {
   // First-run onboarding (activation funnel)
   ONBOARDING_SHOWN: 'onboarding_shown',
   ONBOARDING_CHOICE: 'onboarding_choice',
+
+  // Account / registration
+  SIGN_UP: 'sign_up',
 };
 
 // Generate daily report
