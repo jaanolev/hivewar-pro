@@ -323,6 +323,7 @@ export default function App() {
           onClose={() => setShowTemplatesModal(false)}
           onUpgrade={() => setShowUpgradeModal(true)}
           isPro={isPro}
+          currentBuildingCount={buildingCount}
         />
       )}
 

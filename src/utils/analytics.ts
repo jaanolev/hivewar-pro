@@ -112,6 +112,7 @@ export const Events = {
   // Template actions
   TEMPLATE_VIEWED: 'template_viewed',
   TEMPLATE_APPLIED: 'template_applied',
+  TEMPLATE_APPLY_CANCELLED: 'template_apply_cancelled',
   
   // Export actions
   EXPORT_PNG: 'export_png',

@@ -10,13 +10,15 @@ interface TemplatesModalProps {
   onClose: () => void;
   onUpgrade: () => void;
   isPro?: boolean;
+  currentBuildingCount?: number;
 }
 
 export default function TemplatesModal({
   onApplyTemplate,
   onClose,
   onUpgrade,
-  isPro = false
+  isPro = false,
+  currentBuildingCount = 0,
 }: TemplatesModalProps) {
   const [activeCategory, setActiveCategory] = useState<string>('defense');
   const [selectedTemplate, setSelectedTemplate] = useState<HiveTemplate | null>(null);
@@ -33,11 +35,29 @@ export default function TemplatesModal({
       onUpgrade();
       return;
     }
-    
-    if (confirm(`Apply "${template.name}" template? This will replace your current buildings.`)) {
-      onApplyTemplate(template.buildings);
-      onClose();
+
+    // Only ask for confirmation when there's real work to lose. New users
+    // on an empty plan get the template applied silently — the previous
+    // "this will replace your current buildings" wording on an empty plan
+    // was scaring people out of the only useful path the onboarding flow
+    // offered them.
+    if (currentBuildingCount > 0) {
+      const ok = confirm(
+        `Replace the ${currentBuildingCount} building${
+          currentBuildingCount === 1 ? '' : 's'
+        } on your plan with "${template.name}"?`
+      );
+      if (!ok) {
+        trackEvent(Events.TEMPLATE_APPLY_CANCELLED, {
+          templateId: template.id,
+          existingBuildings: currentBuildingCount,
+        });
+        return;
+      }
     }
+
+    onApplyTemplate(template.buildings);
+    onClose();
   };
 
   return (
