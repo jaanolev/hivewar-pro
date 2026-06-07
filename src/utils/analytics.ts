@@ -146,6 +146,10 @@ export const Events = {
   ONBOARDING_SHOWN: 'onboarding_shown',
   ONBOARDING_CHOICE: 'onboarding_choice',
 
+  // Canvas hints (manual-build guidance for cliff B: 1-2 → 10+ buildings)
+  HINT_SHOWN: 'hint_shown',
+  HINT_DISMISSED: 'hint_dismissed',
+
   // Account / registration
   SIGN_UP: 'sign_up',
 };

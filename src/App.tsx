@@ -8,6 +8,7 @@ import BuildingPalette from './components/Toolbar/BuildingPalette';
 import PropertyPanel from './components/Panel/PropertyPanel';
 import MenuModal from './components/Modals/MenuModal';
 import TemplatesModal from './components/Modals/TemplatesModal';
+import CanvasHints from './components/CanvasHints/CanvasHints';
 import HelpModal from './components/Modals/HelpModal';
 import UpgradeModal from './components/Modals/UpgradeModal';
 import ShareHub, { type ShareTab } from './components/Modals/ShareHub';
@@ -230,6 +231,9 @@ export default function App() {
           stageRef={stageRef}
           canEdit={canEdit}
         />
+        {!showOnboarding && !shareTab && (
+          <CanvasHints buildings={currentPlan.buildings} />
+        )}
       </main>
 
       {/* Building Palette */}
