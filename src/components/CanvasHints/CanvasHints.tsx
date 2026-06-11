@@ -12,11 +12,11 @@ interface Hint {
 }
 
 function pickHint(buildings: PlacedBuilding[]): Hint | null {
-  const categories = new Set(
-    buildings
-      .map((b) => getBuildingById(b.buildingTypeId)?.category)
-      .filter((c): c is string => !!c)
-  );
+  const categories = new Set<string>();
+  for (const b of buildings) {
+    const category = getBuildingById(b.buildingTypeId)?.category;
+    if (category) categories.add(category);
+  }
 
   if (buildings.length === 0) {
     return {
