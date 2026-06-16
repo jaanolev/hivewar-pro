@@ -1,22 +1,33 @@
-import { StrictMode } from 'react'
+import { StrictMode, Suspense, lazy } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
-import AdminDashboard from './pages/AdminDashboard.tsx'
-import LandingPage from './pages/LandingPage.tsx'
 import { AuthProvider } from './lib/auth.tsx'
 import AccountMenu from './components/Toolbar/AccountMenu.tsx'
+
+// Behind hash routes — never hit by organic /-landers, so they ship in
+// their own chunks instead of bloating the default-route bundle.
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard.tsx'));
+const LandingPage = lazy(() => import('./pages/LandingPage.tsx'));
 
 // Simple hash-based routing
 function Router() {
   const hash = window.location.hash;
 
   if (hash === '#/admin') {
-    return <AdminDashboard />;
+    return (
+      <Suspense fallback={null}>
+        <AdminDashboard />
+      </Suspense>
+    );
   }
 
   if (hash === '#/landing' || hash === '#/home') {
-    return <LandingPage />;
+    return (
+      <Suspense fallback={null}>
+        <LandingPage />
+      </Suspense>
+    );
   }
 
   // Default: show the app (for existing users)

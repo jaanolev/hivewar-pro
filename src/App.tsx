@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, Suspense, lazy } from 'react';
 import { useHivePlan } from './hooks/useHivePlan';
 import { calculateDefensePower, generateId } from './utils/grid';
 import type { PlacedBuilding } from './types';
@@ -6,18 +6,23 @@ import HiveGrid from './components/Grid/HiveGrid';
 import TopToolbar from './components/Toolbar/TopToolbar';
 import BuildingPalette from './components/Toolbar/BuildingPalette';
 import PropertyPanel from './components/Panel/PropertyPanel';
-import MenuModal from './components/Modals/MenuModal';
-import TemplatesModal from './components/Modals/TemplatesModal';
 import CanvasHints from './components/CanvasHints/CanvasHints';
-import HelpModal from './components/Modals/HelpModal';
-import UpgradeModal from './components/Modals/UpgradeModal';
-import ShareHub, { type ShareTab } from './components/Modals/ShareHub';
 import WhatsNewModal from './components/Modals/WhatsNewModal';
 import OnboardingModal from './components/Modals/OnboardingModal';
 import LockIndicator from './components/Toolbar/LockIndicator';
 import { getProStatus } from './utils/pro';
 import { trackSessionStart, trackEvent, Events } from './utils/analytics';
 import './App.css';
+
+// Modals that only render on user interaction — load on demand so the
+// initial JS bundle ships about half a megabyte lighter for organic
+// /-landers, who are the entire current user base.
+import type { ShareTab } from './components/Modals/ShareHub';
+const MenuModal = lazy(() => import('./components/Modals/MenuModal'));
+const TemplatesModal = lazy(() => import('./components/Modals/TemplatesModal'));
+const HelpModal = lazy(() => import('./components/Modals/HelpModal'));
+const UpgradeModal = lazy(() => import('./components/Modals/UpgradeModal'));
+const ShareHub = lazy(() => import('./components/Modals/ShareHub'));
 
 // Bump the suffix to re-announce when there's a new round of features.
 const WHATS_NEW_KEY = 'hivewar-whatsnew-v1';
@@ -257,14 +262,16 @@ export default function App() {
 
       {/* Share hub (live collab + export/snapshot) */}
       {shareTab && currentPlan && (
-        <ShareHub
-          plan={currentPlan}
-          stageRef={stageRef}
-          initialTab={shareTab}
-          isPro={isPro}
-          onUpgrade={() => setShowUpgradeModal(true)}
-          onClose={() => setShareTab(null)}
-        />
+        <Suspense fallback={null}>
+          <ShareHub
+            plan={currentPlan}
+            stageRef={stageRef}
+            initialTab={shareTab}
+            isPro={isPro}
+            onUpgrade={() => setShowUpgradeModal(true)}
+            onClose={() => setShareTab(null)}
+          />
+        </Suspense>
       )}
 
       {/* First-run onboarding for brand-new users (empty plan, never onboarded) */}
@@ -291,58 +298,70 @@ export default function App() {
 
       {/* Menu Modal */}
       {showMenuModal && (
-        <MenuModal
-          plans={plans}
-          currentPlanId={currentPlan.id}
-          onSelectPlan={switchPlan}
-          onCreatePlan={createNewPlan}
-          onDeletePlan={deletePlan}
-          onRenamePlan={(name) => updatePlan({ name })}
-          onImportPlan={handleImportPlan}
-          onClose={() => setShowMenuModal(false)}
-          editorControls={{
-            canUndo,
-            canRedo,
-            showGrid: editorState.showGrid,
-            showCoords: editorState.showCoords,
-            onUndo: undo,
-            onRedo: redo,
-            onToggleGrid: toggleGrid,
-            onToggleCoords: toggleCoords,
-            onTemplates: () => setShowTemplatesModal(true),
-            onClear: () => {
-              if (confirm('Clear all buildings? This cannot be undone.')) {
-                clearBuildings();
-              }
-            },
-            onSave: () => alert('Plan saved! ✓'),
-          }}
-        />
+        <Suspense fallback={null}>
+          <MenuModal
+            plans={plans}
+            currentPlanId={currentPlan.id}
+            onSelectPlan={switchPlan}
+            onCreatePlan={createNewPlan}
+            onDeletePlan={deletePlan}
+            onRenamePlan={(name) => updatePlan({ name })}
+            onImportPlan={handleImportPlan}
+            onClose={() => setShowMenuModal(false)}
+            editorControls={{
+              canUndo,
+              canRedo,
+              showGrid: editorState.showGrid,
+              showCoords: editorState.showCoords,
+              onUndo: undo,
+              onRedo: redo,
+              onToggleGrid: toggleGrid,
+              onToggleCoords: toggleCoords,
+              onTemplates: () => setShowTemplatesModal(true),
+              onClear: () => {
+                if (confirm('Clear all buildings? This cannot be undone.')) {
+                  clearBuildings();
+                }
+              },
+              onSave: () => alert('Plan saved! ✓'),
+            }}
+          />
+        </Suspense>
       )}
 
       {/* Templates Modal */}
       {showTemplatesModal && (
-        <TemplatesModal
-          onApplyTemplate={handleApplyTemplate}
-          onClose={() => setShowTemplatesModal(false)}
-          onUpgrade={() => setShowUpgradeModal(true)}
-          isPro={isPro}
-          currentBuildingCount={buildingCount}
-        />
+        <Suspense fallback={null}>
+          <TemplatesModal
+            onApplyTemplate={handleApplyTemplate}
+            onClose={() => setShowTemplatesModal(false)}
+            onUpgrade={() => setShowUpgradeModal(true)}
+            isPro={isPro}
+            currentBuildingCount={buildingCount}
+          />
+        </Suspense>
       )}
 
       {/* Help Modal */}
-      <HelpModal
-        isOpen={showHelpModal}
-        onClose={() => setShowHelpModal(false)}
-      />
+      {showHelpModal && (
+        <Suspense fallback={null}>
+          <HelpModal
+            isOpen={true}
+            onClose={() => setShowHelpModal(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Upgrade Modal */}
-      <UpgradeModal
-        isOpen={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-        onProStatusChange={setIsPro}
-      />
+      {showUpgradeModal && (
+        <Suspense fallback={null}>
+          <UpgradeModal
+            isOpen={true}
+            onClose={() => setShowUpgradeModal(false)}
+            onProStatusChange={setIsPro}
+          />
+        </Suspense>
+      )}
 
       {/* Floating Buttons */}
       <div className="floating-buttons">
