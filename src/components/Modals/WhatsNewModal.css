@@ -18,6 +18,47 @@
   margin-bottom: 12px;
 }
 
+/* When the feature card is rendered as a button (clickable), reset the
+   native button defaults and add affordances. Recordings showed users
+   clicking the marketing copy thinking it was the action — now it is. */
+button.whatsnew-feature {
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  align-items: center;
+  transition: background 150ms ease, border-color 150ms ease,
+    transform 100ms ease;
+}
+
+button.whatsnew-feature:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(139, 92, 246, 0.45);
+}
+
+button.whatsnew-feature:active {
+  transform: scale(0.99);
+}
+
+button.whatsnew-feature:focus-visible {
+  outline: 2px solid rgba(139, 92, 246, 0.6);
+  outline-offset: 2px;
+}
+
+.whatsnew-feature-chevron {
+  margin-left: auto;
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.45);
+  flex-shrink: 0;
+  transition: color 150ms ease, transform 150ms ease;
+}
+
+button.whatsnew-feature:hover .whatsnew-feature-chevron {
+  color: rgba(139, 92, 246, 0.9);
+  transform: translateX(2px);
+}
+
 .whatsnew-icon {
   font-size: 26px;
   line-height: 1;

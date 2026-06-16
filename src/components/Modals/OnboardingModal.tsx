@@ -16,8 +16,8 @@ export default function OnboardingModal({ onStartFromTemplate, onStartBlank }: P
     trackEvent(Events.ONBOARDING_SHOWN);
   }, []);
 
-  const pickTemplate = () => {
-    trackEvent(Events.ONBOARDING_CHOICE, { choice: 'template' });
+  const pickTemplate = (source: 'card' | 'button') => {
+    trackEvent(Events.ONBOARDING_CHOICE, { choice: 'template', source });
     onStartFromTemplate();
   };
 
@@ -45,7 +45,11 @@ export default function OnboardingModal({ onStartFromTemplate, onStartBlank }: P
             Get a head start with a ready-made layout, or design from scratch.
           </p>
 
-          <div className="whatsnew-feature">
+          <button
+            type="button"
+            className="whatsnew-feature"
+            onClick={() => pickTemplate('card')}
+          >
             <span className="whatsnew-icon">📋</span>
             <div>
               <strong>Start from a template</strong>
@@ -54,10 +58,14 @@ export default function OnboardingModal({ onStartFromTemplate, onStartBlank }: P
                 more — then tweak it to fit your alliance.
               </p>
             </div>
-          </div>
+            <span className="whatsnew-feature-chevron" aria-hidden="true">→</span>
+          </button>
 
           <div className="whatsnew-actions">
-            <button className="whatsnew-primary" onClick={pickTemplate}>
+            <button
+              className="whatsnew-primary"
+              onClick={() => pickTemplate('button')}
+            >
               Browse templates →
             </button>
             <button className="whatsnew-secondary" onClick={pickBlank}>
