@@ -79,6 +79,31 @@ export default function HiveGrid({
     setViewport({ x: newPos.x, y: newPos.y, scale: newScale });
   }, [viewport, stageRef]);
 
+  // Zoom the buttons (+/-) around the stage center, so the content the user
+  // is looking at stays roughly under their eye. The previous implementation
+  // changed scale while leaving viewport.x/y untouched, which made content
+  // jump off-screen on each click — Clarity recordings showed users hitting
+  // "+" and immediately re-clicking because it felt broken.
+  const zoomFromCenter = useCallback((delta: number) => {
+    setViewport((prev) => {
+      const newScale = Math.max(
+        MIN_SCALE,
+        Math.min(MAX_SCALE, prev.scale + delta)
+      );
+      if (newScale === prev.scale) return prev;
+      const stage = stageRef.current;
+      const cx = stage ? stage.width() / 2 : 0;
+      const cy = stage ? stage.height() / 2 : 0;
+      const worldX = (cx - prev.x) / prev.scale;
+      const worldY = (cy - prev.y) / prev.scale;
+      return {
+        x: cx - worldX * newScale,
+        y: cy - worldY * newScale,
+        scale: newScale,
+      };
+    });
+  }, [stageRef]);
+
   // Handle stage click
   const handleStageClick = useCallback((e: KonvaEventObject<MouseEvent | TouchEvent>) => {
     // Check if clicked on empty space
@@ -279,16 +304,18 @@ export default function HiveGrid({
 
       {/* Zoom controls */}
       <div className="zoom-controls">
-        <button 
-          onClick={() => setViewport(prev => ({ ...prev, scale: Math.min(MAX_SCALE, prev.scale + 0.2) }))}
+        <button
+          onClick={() => zoomFromCenter(0.2)}
           className="zoom-btn"
+          aria-label="Zoom in"
         >
           +
         </button>
         <span className="zoom-level">{Math.round(viewport.scale * 100)}%</span>
-        <button 
-          onClick={() => setViewport(prev => ({ ...prev, scale: Math.max(MIN_SCALE, prev.scale - 0.2) }))}
+        <button
+          onClick={() => zoomFromCenter(-0.2)}
           className="zoom-btn"
+          aria-label="Zoom out"
         >
           −
         </button>
