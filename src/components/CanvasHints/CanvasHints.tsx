@@ -11,7 +11,7 @@ interface Hint {
   message: string;
 }
 
-function pickHint(buildings: PlacedBuilding[]): Hint | null {
+function pickProgressiveHint(buildings: PlacedBuilding[]): Hint | null {
   const categories = new Set<string>();
   for (const b of buildings) {
     const category = getBuildingById(b.buildingTypeId)?.category;
@@ -21,19 +21,22 @@ function pickHint(buildings: PlacedBuilding[]): Hint | null {
   if (buildings.length === 0) {
     return {
       id: 'place-hq',
-      message: 'Tap "Headquarters" in the toolbar, then tap the grid to place your HQ.',
+      message:
+        'Tap "Buildings", pick Headquarters, then tap the grid to place your HQ.',
     };
   }
   if (!categories.has('defense')) {
     return {
       id: 'add-defense',
-      message: 'Now add defenses — walls, towers, and bunkers — around your HQ.',
+      message:
+        'Now add defenses — walls, towers, and bunkers — around your HQ.',
     };
   }
   if (!categories.has('production')) {
     return {
       id: 'add-production',
-      message: 'Add production buildings (factory, barracks, hospital) inside your defenses to power your hive.',
+      message:
+        'Add production buildings (factory, barracks, hospital) inside your defenses to power your hive.',
     };
   }
   if (buildings.length < 8) {
@@ -42,42 +45,92 @@ function pickHint(buildings: PlacedBuilding[]): Hint | null {
       message: 'Looking good. A full hive usually has 30+ buildings — keep going.',
     };
   }
-  // Graduated: stop showing hints once they're clearly building a real hive.
   return null;
 }
 
 interface CanvasHintsProps {
   buildings: PlacedBuilding[];
+  selectedBuildingTypeId?: string | null;
 }
 
-export default function CanvasHints({ buildings }: CanvasHintsProps) {
-  const [dismissed, setDismissed] = useState(
+export default function CanvasHints({
+  buildings,
+  selectedBuildingTypeId = null,
+}: CanvasHintsProps) {
+  const [progressiveDismissed, setProgressiveDismissed] = useState(
     () => !!localStorage.getItem(DISMISSED_KEY)
+  );
+  // Soft-dismiss place coach for the current selection only
+  const [placeCoachHiddenFor, setPlaceCoachHiddenFor] = useState<string | null>(
+    null
   );
   const lastShownIdRef = useRef<string | null>(null);
 
-  const hint = dismissed ? null : pickHint(buildings);
+  const showPlaceCoach =
+    !!selectedBuildingTypeId &&
+    placeCoachHiddenFor !== selectedBuildingTypeId;
+
+  const placeHint: Hint | null = showPlaceCoach
+    ? {
+        id: 'place-selected',
+        message: (() => {
+          const type = getBuildingById(selectedBuildingTypeId!);
+          return type
+            ? `Tap the grid to place ${type.icon} ${type.name}.`
+            : 'Tap the grid to place the selected building.';
+        })(),
+      }
+    : null;
+
+  const progressiveHint = progressiveDismissed
+    ? null
+    : pickProgressiveHint(buildings);
+
+  // Place coach wins while a building type is selected
+  const hint = placeHint ?? progressiveHint;
 
   useEffect(() => {
     if (!hint) return;
-    if (lastShownIdRef.current === hint.id) return;
-    lastShownIdRef.current = hint.id;
-    trackEvent(Events.HINT_SHOWN, { hintId: hint.id });
-  }, [hint]);
+    const trackId =
+      hint.id === 'place-selected'
+        ? `place-selected:${selectedBuildingTypeId ?? ''}`
+        : hint.id;
+    if (lastShownIdRef.current === trackId) return;
+    lastShownIdRef.current = trackId;
+    trackEvent(Events.HINT_SHOWN, {
+      hintId: hint.id,
+      buildingType: selectedBuildingTypeId ?? undefined,
+    });
+  }, [hint, selectedBuildingTypeId]);
 
   if (!hint) return null;
 
   const handleDismiss = () => {
+    if (hint.id === 'place-selected' && selectedBuildingTypeId) {
+      trackEvent(Events.HINT_DISMISSED, {
+        hintId: hint.id,
+        buildingType: selectedBuildingTypeId,
+      });
+      setPlaceCoachHiddenFor(selectedBuildingTypeId);
+      return;
+    }
     localStorage.setItem(DISMISSED_KEY, '1');
     trackEvent(Events.HINT_DISMISSED, { hintId: hint.id });
-    setDismissed(true);
+    setProgressiveDismissed(true);
   };
 
   return (
-    <div className="canvas-hint" role="status" aria-live="polite">
-      <span className="canvas-hint-icon" aria-hidden="true">💡</span>
+    <div
+      className={`canvas-hint ${hint.id === 'place-selected' ? 'canvas-hint-place' : ''}`}
+      role="status"
+      aria-live="polite"
+    >
+      <span className="canvas-hint-icon" aria-hidden="true">
+        {hint.id === 'place-selected' ? '👆' : '💡'}
+      </span>
       <span className="canvas-hint-text">{hint.message}</span>
       <button
+        type="button"
         className="canvas-hint-close"
         onClick={handleDismiss}
         aria-label="Dismiss hint"

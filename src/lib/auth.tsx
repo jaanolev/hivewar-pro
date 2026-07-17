@@ -14,6 +14,43 @@ import { trackEvent, Events } from '../utils/analytics';
 // completed sign-in (returning users never have this flag set).
 const PENDING_AUTH_KEY = 'hivewar_pending_auth';
 
+/**
+ * Supabase OAuth returns tokens in the URL hash. Clarity (and browser
+ * history / referrers) can capture those. Strip them as soon as the
+ * session is established so tokens don't linger in recordings or logs.
+ */
+function stripAuthParamsFromUrl() {
+  if (typeof window === 'undefined') return;
+  const { hash, pathname, search } = window.location;
+  const hashHasSecrets =
+    hash.includes('access_token') ||
+    hash.includes('refresh_token') ||
+    hash.includes('provider_token') ||
+    hash.includes('error_description');
+  // PKCE code flow also lands query params we shouldn't leave hanging.
+  const params = new URLSearchParams(search);
+  const searchHasSecrets =
+    params.has('code') || params.has('access_token') || params.has('error');
+
+  if (!hashHasSecrets && !searchHasSecrets) return;
+
+  let cleanSearch = search;
+  if (searchHasSecrets) {
+    params.delete('code');
+    params.delete('access_token');
+    params.delete('refresh_token');
+    params.delete('provider_token');
+    params.delete('error');
+    params.delete('error_description');
+    params.delete('error_code');
+    const qs = params.toString();
+    cleanSearch = qs ? `?${qs}` : '';
+  }
+
+  const cleanHash = hashHasSecrets ? '' : hash;
+  window.history.replaceState(null, '', pathname + cleanSearch + cleanHash);
+}
+
 function trackRegistrationIfPending(session: Session | null) {
   const user = session?.user;
   if (!user || user.is_anonymous) return;
@@ -49,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
 
       if (existing) {
+        stripAuthParamsFromUrl();
         trackRegistrationIfPending(existing);
         setSession(existing);
         setLoading(false);
@@ -76,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (newSession) stripAuthParamsFromUrl();
       trackRegistrationIfPending(newSession);
       setSession(newSession);
     });

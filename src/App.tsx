@@ -237,7 +237,10 @@ export default function App() {
           canEdit={canEdit}
         />
         {!showOnboarding && !shareTab && (
-          <CanvasHints buildings={currentPlan.buildings} />
+          <CanvasHints
+            buildings={currentPlan.buildings}
+            selectedBuildingTypeId={editorState.selectedBuildingTypeId}
+          />
         )}
       </main>
 

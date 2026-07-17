@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { openStripeCheckout, activateProCode, getProStatus, clearProStatus } from '../../utils/pro';
 import { trackEvent, Events } from '../../utils/analytics';
+import { useDragDismiss } from '../../hooks/useDragDismiss';
 import './Modal.css';
 import './UpgradeModal.css';
 
@@ -19,6 +20,7 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [restoreSubmitted, setRestoreSubmitted] = useState(false);
+  const { dragHandlers, sheetStyle } = useDragDismiss(onClose);
 
   const proStatus = getProStatus();
 
@@ -38,11 +40,10 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
     setMessage(null);
     trackEvent(Events.PRO_CODE_ENTERED);
 
-    // Simulate network delay for UX
     await new Promise(resolve => setTimeout(resolve, 500));
 
     const result = activateProCode(code, email);
-    
+
     setMessage({
       type: result.success ? 'success' : 'error',
       text: result.message
@@ -76,10 +77,8 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
     setIsLoading(true);
     trackEvent('restore_purchase_requested', { email: restoreEmail });
 
-    // Simulate processing
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    // Store the restore request locally (you'll see this in analytics)
     const restoreRequests = JSON.parse(localStorage.getItem('hivewar_restore_requests') || '[]');
     restoreRequests.push({
       email: restoreEmail,
@@ -98,21 +97,31 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content upgrade-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
+      <div
+        className="modal-content upgrade-modal"
+        style={sheetStyle}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-header upgrade-modal-header" {...dragHandlers}>
           <h2>👑 Upgrade to Pro</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button
+            type="button"
+            className="modal-close upgrade-close"
+            onClick={onClose}
+            aria-label="Close upgrade dialog"
+          >
+            ✕
+          </button>
         </div>
 
         <div className="upgrade-content">
           {proStatus.isPro ? (
-            // Already Pro - Show status
             <div className="pro-status-section">
               <div className="pro-badge-large">👑 PRO</div>
               <h3>You're a Pro member!</h3>
               <p className="pro-email">{proStatus.email}</p>
               <p className="pro-date">Member since: {new Date(proStatus.activatedDate || '').toLocaleDateString()}</p>
-              
+
               <div className="pro-features-active">
                 <h4>Your Pro Features:</h4>
                 <ul>
@@ -123,17 +132,15 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
                 </ul>
               </div>
 
-              <button className="deactivate-btn" onClick={handleDeactivate}>
+              <button type="button" className="deactivate-btn" onClick={handleDeactivate}>
                 Deactivate Pro
               </button>
             </div>
           ) : (
-            // Not Pro - Show upgrade options
             <>
-              {/* Pricing Card */}
               <div className="pricing-card">
                 <div className="pricing-header">
-                  <span className="pricing-badge">MOST POPULAR</span>
+                  <span className="pricing-badge" aria-hidden="true">MOST POPULAR</span>
                   <h3>Pro Monthly</h3>
                   <div className="pricing-amount">
                     <span className="price">€4.99</span>
@@ -147,11 +154,10 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
                   <li>✓ CSV import for player lists</li>
                   <li>✓ Priority email support</li>
                   <li>✓ Early access to new features</li>
-                  <li className="coming-soon">🔜 Real-time collaboration</li>
                   <li className="coming-soon">🔜 AI hive optimizer</li>
                 </ul>
 
-                <button className="subscribe-btn" onClick={handleSubscribe}>
+                <button type="button" className="subscribe-btn" onClick={handleSubscribe}>
                   Subscribe Now →
                 </button>
 
@@ -160,15 +166,14 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
                 </p>
               </div>
 
-              {/* Divider */}
-              <div className="upgrade-divider">
+              <div className="upgrade-divider" aria-hidden="true">
                 <span>or</span>
               </div>
 
-              {/* Code Activation */}
               <div className="code-section">
                 {!showCodeInput ? (
-                  <button 
+                  <button
+                    type="button"
                     className="have-code-btn"
                     onClick={() => { setShowCodeInput(true); setShowRestoreForm(false); }}
                   >
@@ -192,14 +197,16 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
                       className="code-input"
                       maxLength={30}
                     />
-                    <button 
+                    <button
+                      type="button"
                       className="activate-btn"
                       onClick={handleActivateCode}
                       disabled={isLoading || !code}
                     >
                       {isLoading ? 'Activating...' : 'Activate Pro'}
                     </button>
-                    <button 
+                    <button
+                      type="button"
                       className="cancel-code-btn"
                       onClick={() => setShowCodeInput(false)}
                     >
@@ -209,10 +216,10 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
                 )}
               </div>
 
-              {/* Restore Purchase */}
               <div className="restore-section">
                 {!showRestoreForm ? (
-                  <button 
+                  <button
+                    type="button"
                     className="restore-btn"
                     onClick={() => { setShowRestoreForm(true); setShowCodeInput(false); }}
                   >
@@ -233,14 +240,16 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
                           onChange={(e) => setRestoreEmail(e.target.value)}
                           className="code-input"
                         />
-                        <button 
+                        <button
+                          type="button"
                           className="activate-btn"
                           onClick={handleRestoreSubmit}
                           disabled={isLoading || !restoreEmail}
                         >
                           {isLoading ? 'Submitting...' : 'Request Restore'}
                         </button>
-                        <button 
+                        <button
+                          type="button"
                           className="cancel-code-btn"
                           onClick={() => setShowRestoreForm(false)}
                         >
@@ -260,7 +269,6 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
                 )}
               </div>
 
-              {/* Message */}
               {message && (
                 <div className={`upgrade-message ${message.type}`}>
                   {message.type === 'success' ? '✓' : '✗'} {message.text}
@@ -270,12 +278,15 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
           )}
         </div>
 
-        {/* Footer */}
         <div className="upgrade-footer">
+          {!proStatus.isPro && (
+            <button type="button" className="upgrade-dismiss-btn" onClick={onClose}>
+              Not now — keep planning free
+            </button>
+          )}
           <p>Questions? Contact us on Discord</p>
         </div>
       </div>
     </div>
   );
 }
-

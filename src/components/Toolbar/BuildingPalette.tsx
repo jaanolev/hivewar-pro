@@ -31,16 +31,20 @@ export default function BuildingPalette({
         <div className="palette-content">
           <h3 className="palette-title">Buildings</h3>
 
-          {/* Category tabs */}
-          <div className="category-tabs">
+          {/* Category tabs — labels on mobile reduce dead taps on icon-only chips */}
+          <div className="category-tabs" role="tablist" aria-label="Building categories">
             {BUILDING_CATEGORIES.map(cat => (
               <button
+                type="button"
                 key={cat.id}
+                role="tab"
+                aria-selected={activeCategory === cat.id}
                 className={`category-tab ${activeCategory === cat.id ? 'active' : ''}`}
                 onClick={() => setActiveCategory(cat.id)}
                 title={cat.name}
               >
-                {cat.icon}
+                <span className="category-tab-icon" aria-hidden="true">{cat.icon}</span>
+                <span className="category-tab-label">{cat.name}</span>
               </button>
             ))}
           </div>
@@ -57,10 +61,10 @@ export default function BuildingPalette({
             ))}
           </div>
 
-          {/* Instructions */}
-          <div className="palette-hint">
-            {selectedTypeId 
-              ? '👆 Tap on grid to place' 
+          {/* Instructions — keep visible on mobile when a type is selected */}
+          <div className={`palette-hint ${selectedTypeId ? 'palette-hint-active' : ''}`}>
+            {selectedTypeId
+              ? '👆 Tap the grid to place'
               : '👇 Select a building type'}
           </div>
         </div>
@@ -78,11 +82,14 @@ interface BuildingCardProps {
 function BuildingCard({ building, isSelected, onSelect }: BuildingCardProps) {
   return (
     <button
+      type="button"
       className={`building-card ${isSelected ? 'selected' : ''}`}
       onClick={onSelect}
+      aria-pressed={isSelected}
+      aria-label={`${building.name}, ${building.width} by ${building.height}`}
       style={{ '--building-color': building.color } as React.CSSProperties}
     >
-      <div className="building-icon">{building.icon}</div>
+      <div className="building-icon" aria-hidden="true">{building.icon}</div>
       <div className="building-name">{building.name}</div>
       <div className="building-size">{building.width}×{building.height}</div>
     </button>

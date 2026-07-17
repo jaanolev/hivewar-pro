@@ -73,13 +73,39 @@
 .category-tab {
   flex: 1;
   min-width: 36px;
-  height: 36px;
+  min-height: 40px;
+  height: auto;
+  padding: 6px 4px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   font-size: 16px;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.category-tab-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.category-tab-label {
+  display: none;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: inherit;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .category-tab:hover {
@@ -91,6 +117,7 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-color: transparent;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  color: #fff;
 }
 
 .buildings-grid {
@@ -115,6 +142,9 @@
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
 }
 
 .building-card::before {
@@ -280,10 +310,23 @@
   }
 
   .category-tab {
-    min-width: 44px;
-    height: 44px;
+    min-width: 56px;
+    min-height: 48px;
+    height: auto;
+    padding: 8px 6px;
     font-size: 18px;
     flex-shrink: 0;
+    border-radius: 10px;
+  }
+
+  .category-tab-icon {
+    font-size: 18px;
+  }
+
+  .category-tab-label {
+    display: block;
+    font-size: 9px;
+    opacity: 0.9;
   }
 
   .buildings-grid {
@@ -295,6 +338,7 @@
     padding: 6px;
     border-radius: 10px;
     aspect-ratio: 1;
+    min-height: 56px;
   }
 
   .building-icon {
@@ -310,8 +354,19 @@
     display: none; /* Save space on mobile */
   }
 
+  /* Only show place coach in-palette when a type is selected */
   .palette-hint {
-    display: none; /* Save space */
+    display: none;
+  }
+
+  .palette-hint.palette-hint-active {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #86efac;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    padding: 10px;
   }
 }
 
@@ -331,8 +386,9 @@
   }
 
   .category-tab {
-    min-width: 40px;
-    height: 40px;
+    min-width: 52px;
+    min-height: 46px;
+    height: auto;
     font-size: 16px;
   }
 

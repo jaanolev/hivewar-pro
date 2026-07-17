@@ -35,6 +35,7 @@ export default function HiveGrid({
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [viewport, setViewport] = useState<ViewportState>({ x: 0, y: 0, scale: 0.8 });
   const [, setIsDragging] = useState(false);
+  const prevBuildingCountRef = useRef(buildings.length);
 
   // Handle container resize
   useEffect(() => {
@@ -103,6 +104,76 @@ export default function HiveGrid({
       };
     });
   }, [stageRef]);
+
+  // One-tap frame of the full grid, or of placed buildings when the hive
+  // has content. Clarity sessions showed users spam −/+ trying to "see
+  // everything" — button zoom is the wrong tool for that job.
+  const fitToView = useCallback(() => {
+    const stage = stageRef.current;
+    const viewW = stage?.width() ?? dimensions.width;
+    const viewH = stage?.height() ?? dimensions.height;
+    if (viewW <= 0 || viewH <= 0) return;
+
+    const padding = 28;
+    let worldX = 0;
+    let worldY = 0;
+    let worldW = gridWidth * TILE_SIZE;
+    let worldH = gridHeight * TILE_SIZE;
+
+    if (buildings.length > 0) {
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      for (const b of buildings) {
+        const type = getBuildingById(b.buildingTypeId);
+        const bw = type?.width ?? 1;
+        const bh = type?.height ?? 1;
+        // Rotation swaps footprint axes for 90°/270°.
+        const rot = ((b.rotation % 360) + 360) % 360;
+        const w = rot === 90 || rot === 270 ? bh : bw;
+        const h = rot === 90 || rot === 270 ? bw : bh;
+        minX = Math.min(minX, b.gridX);
+        minY = Math.min(minY, b.gridY);
+        maxX = Math.max(maxX, b.gridX + w);
+        maxY = Math.max(maxY, b.gridY + h);
+      }
+      // 2-tile breathing room around the hive
+      minX = Math.max(0, minX - 2);
+      minY = Math.max(0, minY - 2);
+      maxX = Math.min(gridWidth, maxX + 2);
+      maxY = Math.min(gridHeight, maxY + 2);
+      worldX = minX * TILE_SIZE;
+      worldY = minY * TILE_SIZE;
+      worldW = Math.max(TILE_SIZE, (maxX - minX) * TILE_SIZE);
+      worldH = Math.max(TILE_SIZE, (maxY - minY) * TILE_SIZE);
+    }
+
+    const scale = Math.max(
+      MIN_SCALE,
+      Math.min(
+        MAX_SCALE,
+        Math.min((viewW - padding * 2) / worldW, (viewH - padding * 2) / worldH)
+      )
+    );
+    setViewport({
+      x: (viewW - worldW * scale) / 2 - worldX * scale,
+      y: (viewH - worldH * scale) / 2 - worldY * scale,
+      scale,
+    });
+  }, [buildings, dimensions.height, dimensions.width, gridHeight, gridWidth, stageRef]);
+
+  // After a template apply (empty → many buildings), frame the hive so users
+  // don't have to spam zoom-out to find what just appeared.
+  useEffect(() => {
+    const prev = prevBuildingCountRef.current;
+    const next = buildings.length;
+    prevBuildingCountRef.current = next;
+    if (prev === 0 && next >= 5) {
+      const id = requestAnimationFrame(() => fitToView());
+      return () => cancelAnimationFrame(id);
+    }
+  }, [buildings.length, fitToView]);
 
   // Handle stage click
   const handleStageClick = useCallback((e: KonvaEventObject<MouseEvent | TouchEvent>) => {
@@ -305,6 +376,7 @@ export default function HiveGrid({
       {/* Zoom controls */}
       <div className="zoom-controls">
         <button
+          type="button"
           onClick={() => zoomFromCenter(0.2)}
           className="zoom-btn"
           aria-label="Zoom in"
@@ -313,16 +385,28 @@ export default function HiveGrid({
         </button>
         <span className="zoom-level">{Math.round(viewport.scale * 100)}%</span>
         <button
+          type="button"
           onClick={() => zoomFromCenter(-0.2)}
           className="zoom-btn"
           aria-label="Zoom out"
         >
           −
         </button>
-        <button 
+        <button
+          type="button"
+          onClick={fitToView}
+          className="zoom-btn zoom-btn-fit"
+          title={buildings.length > 0 ? 'Fit hive to screen' : 'Fit full grid to screen'}
+          aria-label={buildings.length > 0 ? 'Fit hive to screen' : 'Fit full grid to screen'}
+        >
+          ⊡
+        </button>
+        <button
+          type="button"
           onClick={() => setViewport({ x: 50, y: 50, scale: 0.8 })}
           className="zoom-btn"
-          title="Reset View"
+          title="Reset view"
+          aria-label="Reset view"
         >
           ⌂
         </button>

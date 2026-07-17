@@ -17,6 +17,14 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   z-index: 5;
   animation: canvas-hint-fade-in 220ms ease-out;
+  pointer-events: auto;
+}
+
+/* Stronger emphasis when a building is selected and waiting for place */
+.canvas-hint-place {
+  border-color: rgba(16, 185, 129, 0.55);
+  background: rgba(6, 40, 28, 0.94);
+  box-shadow: 0 8px 28px rgba(16, 185, 129, 0.25);
 }
 
 .canvas-hint-icon {
