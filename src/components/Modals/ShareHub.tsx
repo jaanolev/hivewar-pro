@@ -16,6 +16,7 @@ interface Props {
   isPro: boolean;
   onUpgrade: () => void;
   onClose: () => void;
+  autoCopyView?: boolean;
 }
 
 export default function ShareHub({
@@ -25,6 +26,7 @@ export default function ShareHub({
   isPro,
   onUpgrade,
   onClose,
+  autoCopyView = false,
 }: Props) {
   const [tab, setTab] = useState<ShareTab>(initialTab);
   const { dragHandlers, sheetStyle } = useDragDismiss(onClose);
@@ -68,7 +70,7 @@ export default function ShareHub({
 
         {tab === 'collaborate' ? (
           <div className="modal-body">
-            <LiveSharePanel planId={plan.id} />
+            <LiveSharePanel planId={plan.id} autoCopyView={autoCopyView} />
           </div>
         ) : (
           <ExportPanel

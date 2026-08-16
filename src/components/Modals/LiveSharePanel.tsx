@@ -6,10 +6,11 @@ import './ShareModal.css';
 
 interface Props {
   planId: string;
+  autoCopyView?: boolean;
 }
 
 // Live-collaboration tab body. Lives inside ShareHub's tabbed shell.
-export default function LiveSharePanel({ planId }: Props) {
+export default function LiveSharePanel({ planId, autoCopyView = false }: Props) {
   const [tokens, setTokens] = useState<ShareTokens | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +46,14 @@ export default function LiveSharePanel({ planId }: Props) {
   const editUrl = tokens ? `${baseUrl}?share=${tokens.share_token}` : '';
   const viewUrl = tokens ? `${baseUrl}?view=${tokens.view_token}` : '';
 
+  useEffect(() => {
+    if (!autoCopyView || !tokens) return;
+    const url = `${baseUrl}?view=${tokens.view_token}`;
+    copyToClipboard(url).then((ok) => {
+      if (ok) trackEvent(Events.COLLAB_LINK_COPIED, { type: 'view', source: 'first_run' });
+    });
+  }, [autoCopyView, tokens, baseUrl]);
+
   return (
     <div className="share-panel">
       {loading && <p className="share-modal-loading">Generating links…</p>}
@@ -67,9 +76,10 @@ export default function LiveSharePanel({ planId }: Props) {
           />
           <ShareLinkRow
             label="View-only link"
-            hint="Recipients watch live but can't change anything. Safe to post publicly."
+            hint={autoCopyView ? "Copied. Send this to Discord so people can see their spot." : "Recipients watch live but can't change anything. Safe to post publicly."}
             url={viewUrl}
             variant="view"
+            startCopied={autoCopyView}
           />
         </>
       )}
@@ -82,13 +92,15 @@ function ShareLinkRow({
   hint,
   url,
   variant,
+  startCopied = false,
 }: {
   label: string;
   hint: string;
   url: string;
   variant: 'edit' | 'view';
+  startCopied?: boolean;
 }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState(startCopied);
 
   async function copy() {
     const ok = await copyToClipboard(url);

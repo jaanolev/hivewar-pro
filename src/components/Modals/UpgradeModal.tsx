@@ -143,18 +143,17 @@ export default function UpgradeModal({ isOpen, onClose, onProStatusChange }: Upg
                   <span className="pricing-badge" aria-hidden="true">MOST POPULAR</span>
                   <h3>Pro Monthly</h3>
                   <div className="pricing-amount">
-                    <span className="price">€4.99</span>
+                    <span className="price">$5.99</span>
                     <span className="period">/month</span>
                   </div>
                 </div>
 
                 <ul className="pricing-features">
-                  <li>✓ <strong>Unlimited</strong> exports (PNG, CSV, JSON)</li>
-                  <li>✓ <strong>All templates</strong> unlocked</li>
-                  <li>✓ CSV import for player lists</li>
-                  <li>✓ Priority email support</li>
-                  <li>✓ Early access to new features</li>
-                  <li className="coming-soon">🔜 AI hive optimizer</li>
+                  <li>Live alliance editing for officers</li>
+                  <li>Roster / CSV import for player lists</li>
+                  <li>Extra seasonal templates</li>
+                  <li>Priority email support</li>
+                  <li className="coming-soon">Coming later: AI hive optimizer</li>
                 </ul>
 
                 <button type="button" className="subscribe-btn" onClick={handleSubscribe}>

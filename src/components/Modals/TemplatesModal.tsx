@@ -234,7 +234,7 @@ export default function TemplatesModal({
                   onUpgrade();
                 }}
               >
-                Upgrade €4.99/mo →
+                Upgrade $5.99/mo
               </button>
             </div>
           )}

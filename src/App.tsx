@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, Suspense, lazy } from 'react';
+﻿import { useState, useRef, useCallback, useEffect, Suspense, lazy } from 'react';
 import { useHivePlan } from './hooks/useHivePlan';
 import { calculateDefensePower, generateId } from './utils/grid';
 import type { PlacedBuilding } from './types';
@@ -9,12 +9,13 @@ import PropertyPanel from './components/Panel/PropertyPanel';
 import CanvasHints from './components/CanvasHints/CanvasHints';
 import WhatsNewModal from './components/Modals/WhatsNewModal';
 import OnboardingModal from './components/Modals/OnboardingModal';
+import { HIVE_TEMPLATES } from './data/templates';
 import LockIndicator from './components/Toolbar/LockIndicator';
 import { getProStatus } from './utils/pro';
 import { trackSessionStart, trackEvent, Events } from './utils/analytics';
 import './App.css';
 
-// Modals that only render on user interaction — load on demand so the
+// Modals that only render on user interaction â€” load on demand so the
 // initial JS bundle ships about half a megabyte lighter for organic
 // /-landers, who are the entire current user base.
 import type { ShareTab } from './components/Modals/ShareHub';
@@ -74,6 +75,14 @@ export default function App() {
   const [onboarded, setOnboarded] = useState(
     () => !!localStorage.getItem(ONBOARDING_KEY)
   );
+  const [toast, setToast] = useState<string | null>(null);
+  const [firstRunShare, setFirstRunShare] = useState(false);
+  const autoAppliedRef = useRef(false);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    window.setTimeout(() => setToast(null), 2200);
+  };
 
   const dismissWhatsNew = () => {
     localStorage.setItem(WHATS_NEW_KEY, '1');
@@ -163,6 +172,37 @@ export default function App() {
     trackEvent(Events.TEMPLATE_APPLIED, { buildingCount: newBuildings.length });
   }, [updatePlan]);
 
+  const stampHqNames = useCallback((buildings: PlacedBuilding[], names: string[]) => {
+    const cleaned = names.map(n => n.trim()).filter(Boolean);
+    if (!cleaned.length) return buildings;
+    const rank = (id: string) => {
+      if (id === 'hq-marshal') return 0;
+      if (id === 'hq-r4') return 1;
+      if (id === 'hq') return 2;
+      return 99;
+    };
+    const targets = [...buildings]
+      .filter(b => rank(b.buildingTypeId) < 99)
+      .sort((a, b) => rank(a.buildingTypeId) - rank(b.buildingTypeId) || a.gridY - b.gridY || a.gridX - b.gridX);
+    return buildings.map(b => {
+      const idx = targets.findIndex(t => t.id === b.id);
+      if (idx >= 0 && idx < cleaned.length) {
+        return { ...b, playerName: cleaned[idx] };
+      }
+      return b;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!currentPlan || onboarded || autoAppliedRef.current) return;
+    if (currentPlan.buildings.length > 0) return;
+    const template = HIVE_TEMPLATES.find(t => t.id === 'diamond-defense');
+    if (!template) return;
+    autoAppliedRef.current = true;
+    handleApplyTemplate(template.buildings);
+    trackEvent(Events.ONBOARDING_CHOICE, { choice: 'template', source: 'auto' });
+  }, [currentPlan, onboarded, handleApplyTemplate]);
+
   // Calculate stats
   const buildingCount = currentPlan?.buildings.length || 0;
   const defensePower = currentPlan ? calculateDefensePower(currentPlan.buildings) : 0;
@@ -171,7 +211,7 @@ export default function App() {
   return (
       <div className="loading-screen">
         <div className="loading-content">
-          <div className="loading-icon">🏰</div>
+          <div className="loading-icon">đźŹ°</div>
           <h1>HiveWar Pro</h1>
           <p>Loading your hive plans...</p>
         </div>
@@ -179,7 +219,7 @@ export default function App() {
     );
   }
 
-  const showOnboarding = !onboarded && currentPlan.buildings.length === 0 && !shareTab;
+  const showOnboarding = !onboarded && !shareTab;
 
   return (
     <div className="app">
@@ -210,10 +250,7 @@ export default function App() {
         }}
         onExport={() => setShareTab('export')}
         onShare={() => setShareTab('collaborate')}
-        onSave={() => {
-          // Plans auto-save, but show feedback
-          alert('Plan saved! ✓');
-        }}
+        onSave={() => showToast('Saved')}
         onMenuOpen={() => setShowMenuModal(true)}
         onTemplatesOpen={() => setShowTemplatesModal(true)}
         canUndo={canUndo}
@@ -272,7 +309,8 @@ export default function App() {
             initialTab={shareTab}
             isPro={isPro}
             onUpgrade={() => setShowUpgradeModal(true)}
-            onClose={() => setShareTab(null)}
+            autoCopyView={firstRunShare}
+            onClose={() => { setShareTab(null); setFirstRunShare(false); }}
           />
         </Suspense>
       )}
@@ -280,11 +318,17 @@ export default function App() {
       {/* First-run onboarding for brand-new users (empty plan, never onboarded) */}
       {showOnboarding && (
         <OnboardingModal
-          onStartFromTemplate={() => {
+          onStampAndShare={(names) => {
+            updatePlan({ buildings: stampHqNames(currentPlan.buildings, names) });
+            trackEvent(Events.NAMES_STAMPED, { count: names.length });
             finishOnboarding();
-            setShowTemplatesModal(true);
+            setFirstRunShare(true);
+            setShareTab('collaborate');
           }}
-          onStartBlank={finishOnboarding}
+          onStartBlank={() => {
+            if (currentPlan.buildings.length > 0) clearBuildings();
+            finishOnboarding();
+          }}
         />
       )}
 
@@ -326,7 +370,7 @@ export default function App() {
                   clearBuildings();
                 }
               },
-              onSave: () => alert('Plan saved! ✓'),
+              onSave: () => alert('Plan saved! âś“'),
             }}
           />
         </Suspense>
@@ -375,7 +419,7 @@ export default function App() {
             onClick={() => setShowUpgradeModal(true)}
             title="Pro Member"
           >
-            👑
+            đź‘‘
           </button>
         ) : (
           <button 
@@ -386,7 +430,7 @@ export default function App() {
             }}
             title="Upgrade to Pro"
           >
-            ⭐
+            â­
           </button>
         )}
         
@@ -399,14 +443,17 @@ export default function App() {
           }}
           title="Help & User Guide"
         >
-          ❓
+          âť“
         </button>
       </div>
 
       {/* Mobile tip */}
+      {toast && <div className="app-toast">{toast}</div>}
+
       <div className="mobile-tip">
-        <span>Pinch to zoom • Drag to pan • Tap to place</span>
+        <span>Pinch to zoom â€˘ Drag to pan â€˘ Tap to place</span>
       </div>
     </div>
   );
 }
+

@@ -150,6 +150,17 @@ const EXPORT_RESET_KEY = 'hivewar-export-reset';
 const BONUS_EXPORTS_KEY = 'hivewar-bonus-exports';
 const SHARE_COUNT_KEY = 'hivewar-share-count';
 const FREE_EXPORT_LIMIT = 3;
+const FIRST_PNG_KEY = 'hivewar-first-png-used';
+
+export function consumeFirstPlanPng(): boolean {
+  if (localStorage.getItem(FIRST_PNG_KEY)) return false;
+  localStorage.setItem(FIRST_PNG_KEY, '1');
+  return true;
+}
+
+export function hasUsedFirstPlanPng(): boolean {
+  return !!localStorage.getItem(FIRST_PNG_KEY);
+}
 const BONUS_PER_SHARE = 3;
 const MAX_BONUS_EXPORTS = 15; // Cap bonus at 15 (5 shares max)
 
@@ -203,6 +214,7 @@ export function incrementExportCount(): number {
 
 export function canExport(isPro: boolean = false): boolean {
   if (isPro) return true;
+  if (!hasUsedFirstPlanPng()) return true;
   return getExportCount() < getTotalExportLimit(false);
 }
 

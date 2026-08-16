@@ -145,6 +145,7 @@ export const Events = {
   // First-run onboarding (activation funnel)
   ONBOARDING_SHOWN: 'onboarding_shown',
   ONBOARDING_CHOICE: 'onboarding_choice',
+  NAMES_STAMPED: 'names_stamped',
 
   // Canvas hints (manual-build guidance for cliff B: 1-2 → 10+ buildings)
   HINT_SHOWN: 'hint_shown',

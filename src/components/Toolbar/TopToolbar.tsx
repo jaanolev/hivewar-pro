@@ -142,10 +142,10 @@ export default function TopToolbar({
         <button
           className="action-btn accent"
           onClick={onShare}
-          title="Edit this plan live with your alliance"
+          title="Send to alliance"
         >
           <span className="btn-icon">👥</span>
-          <span className="btn-label">Collaborate</span>
+          <span className="btn-label">Alliance</span>
         </button>
       </div>
     </div>

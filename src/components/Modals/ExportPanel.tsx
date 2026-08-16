@@ -9,6 +9,7 @@ import {
   canExport,
   getRemainingExports,
   incrementExportCount,
+  consumeFirstPlanPng,
   addBonusExports,
   canEarnMoreBonusExports,
   getBonusExports,
@@ -108,7 +109,7 @@ export default function ExportPanel({
           link.click();
           document.body.removeChild(link);
 
-          incrementExportCount();
+          if (!consumeFirstPlanPng()) incrementExportCount();
           trackEvent(Events.EXPORT_PNG, {
             buildingCount: plan.buildings.length,
             watermarked: true,
