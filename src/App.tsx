@@ -15,7 +15,7 @@ import { getProStatus } from './utils/pro';
 import { trackSessionStart, trackEvent, Events } from './utils/analytics';
 import './App.css';
 
-// Modals that only render on user interaction â€” load on demand so the
+// Modals that only render on user interaction — load on demand so the
 // initial JS bundle ships about half a megabyte lighter for organic
 // /-landers, who are the entire current user base.
 import type { ShareTab } from './components/Modals/ShareHub';
@@ -211,7 +211,7 @@ export default function App() {
   return (
       <div className="loading-screen">
         <div className="loading-content">
-          <div className="loading-icon">đźŹ°</div>
+          <div className="loading-icon">🏰</div>
           <h1>HiveWar Pro</h1>
           <p>Loading your hive plans...</p>
         </div>
@@ -370,7 +370,7 @@ export default function App() {
                   clearBuildings();
                 }
               },
-              onSave: () => alert('Plan saved! âś“'),
+              onSave: () => alert('Plan saved! ✓'),
             }}
           />
         </Suspense>
@@ -419,7 +419,7 @@ export default function App() {
             onClick={() => setShowUpgradeModal(true)}
             title="Pro Member"
           >
-            đź‘‘
+            👑
           </button>
         ) : (
           <button 
@@ -430,7 +430,7 @@ export default function App() {
             }}
             title="Upgrade to Pro"
           >
-            â­
+            ⭐
           </button>
         )}
         
@@ -443,7 +443,7 @@ export default function App() {
           }}
           title="Help & User Guide"
         >
-          âť“
+          ❓
         </button>
       </div>
 
@@ -451,7 +451,7 @@ export default function App() {
       {toast && <div className="app-toast">{toast}</div>}
 
       <div className="mobile-tip">
-        <span>Pinch to zoom â€˘ Drag to pan â€˘ Tap to place</span>
+        <span>Pinch to zoom • Drag to pan • Tap to place</span>
       </div>
     </div>
   );
