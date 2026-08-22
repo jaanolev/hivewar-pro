@@ -219,7 +219,7 @@ export default function App() {
     );
   }
 
-  const showOnboarding = !onboarded && !shareTab;
+  const showOnboarding = !onboarded && !shareTab && currentPlan.buildings.length > 0;
 
   return (
     <div className="app">
@@ -319,6 +319,10 @@ export default function App() {
       {showOnboarding && (
         <OnboardingModal
           onStampAndShare={(names) => {
+            if (currentPlan.buildings.length === 0) {
+              console.error('[onboarding] Cannot share empty plan - template not yet applied');
+              return;
+            }
             updatePlan({ buildings: stampHqNames(currentPlan.buildings, names) });
             trackEvent(Events.NAMES_STAMPED, { count: names.length });
             finishOnboarding();
