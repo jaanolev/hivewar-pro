@@ -76,7 +76,7 @@ export default function LiveSharePanel({ planId, autoCopyView = false }: Props) 
           />
           <ShareLinkRow
             label="View-only link"
-            hint={autoCopyView ? "Copied. Send this to Discord so people can see their spot." : "Recipients watch live but can't change anything. Safe to post publicly."}
+            hint={autoCopyView ? "✓ Copied! Send this to Discord so your alliance can see their spots." : "Recipients watch live but can't change anything. Safe to post publicly."}
             url={viewUrl}
             variant="view"
             startCopied={autoCopyView}
