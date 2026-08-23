@@ -116,8 +116,6 @@ export default function App() {
     // Check if returning from successful payment
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('payment') === 'success') {
-      // Show upgrade modal so user can enter their code/email
-      setShowUpgradeModal(true);
       // Clean up URL but preserve view/share params
       urlParams.delete('payment');
       const newSearch = urlParams.toString();
@@ -125,8 +123,15 @@ export default function App() {
       window.history.replaceState({}, '', newUrl);
       // Track the payment completion
       trackEvent(Events.PAYMENT_COMPLETED);
+      
+      // Only auto-open upgrade modal if not first-run. During first-run,
+      // the onboarding modal takes priority and visitors shouldn't be hit
+      // with a second overlay before they've even seen the grid.
+      if (onboarded) {
+        setShowUpgradeModal(true);
+      }
     }
-  }, []);
+  }, [onboarded]);
 
   // Get selected building for property panel
   const selectedBuilding = currentPlan?.buildings.find(
