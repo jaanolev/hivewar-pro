@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getOrCreateShareTokens, type ShareTokens } from '../../utils/cloudStorage';
 import { copyToClipboard } from '../../utils/storage';
 import { trackEvent, Events } from '../../utils/analytics';
+import { playConfirmSound } from '../../utils/audio';
 import './ShareModal.css';
 
 interface Props {
@@ -106,8 +107,9 @@ function ShareLinkRow({
     const ok = await copyToClipboard(url);
     if (ok) {
       setCopied(true);
+      playConfirmSound(); // Classy click on successful copy
       trackEvent(Events.COLLAB_LINK_COPIED, { type: variant });
-      setTimeout(() => setCopied(false), 1500);
+      setTimeout(() => setCopied(false), 1800);
     }
   }
 
@@ -124,7 +126,9 @@ function ShareLinkRow({
           value={url}
           onFocus={(e) => e.currentTarget.select()}
         />
-        <button onClick={copy}>{copied ? '✓ Copied' : 'Copy'}</button>
+        <button onClick={copy} className={copied ? 'copied' : ''}>
+          {copied ? '✓ Copied' : 'Copy'}
+        </button>
       </div>
     </div>
   );
