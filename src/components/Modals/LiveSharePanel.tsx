@@ -27,11 +27,13 @@ export default function LiveSharePanel({ planId, autoCopyView = false }: Props) 
         setTokens(t);
       } catch (e) {
         if (cancelled) return;
+        console.error('[LiveSharePanel] getOrCreateShareTokens error:', e);
         const raw = e instanceof Error ? e.message : 'Failed to create share link.';
+        // Show the actual error message to help diagnose issues
         setError(
           raw.toLowerCase().includes('owner')
             ? "Only the plan's owner can create share links. Ask whoever created this plan to send you the link."
-            : raw
+            : `Failed to create share link: ${raw}`
         );
       } finally {
         if (!cancelled) setLoading(false);

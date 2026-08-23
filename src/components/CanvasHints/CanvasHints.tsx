@@ -51,12 +51,17 @@ function pickProgressiveHint(buildings: PlacedBuilding[]): Hint | null {
 interface CanvasHintsProps {
   buildings: PlacedBuilding[];
   selectedBuildingTypeId?: string | null;
+  isViewOnly?: boolean;
 }
 
 export default function CanvasHints({
   buildings,
   selectedBuildingTypeId = null,
+  isViewOnly = false,
 }: CanvasHintsProps) {
+  // Don't show coaching hints in view-only mode - recipients can't place buildings
+  if (isViewOnly) return null;
+  
   const [progressiveDismissed, setProgressiveDismissed] = useState(
     () => !!localStorage.getItem(DISMISSED_KEY)
   );
