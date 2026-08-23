@@ -5,7 +5,7 @@ import './Modal.css';
 import './WhatsNewModal.css';
 
 interface Props {
-  onStampAndShare: (names: string[]) => void;
+  onStampAndShare: (names: string[]) => void | Promise<void>;
   onStartBlank: () => void;
 }
 

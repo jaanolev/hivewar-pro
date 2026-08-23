@@ -116,6 +116,8 @@ export default function App() {
     // Check if returning from successful payment
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('payment') === 'success') {
+      // Show upgrade modal so user can enter their code/email
+      setShowUpgradeModal(true);
       // Clean up URL but preserve view/share params
       urlParams.delete('payment');
       const newSearch = urlParams.toString();
@@ -123,15 +125,8 @@ export default function App() {
       window.history.replaceState({}, '', newUrl);
       // Track the payment completion
       trackEvent(Events.PAYMENT_COMPLETED);
-      
-      // Only auto-open upgrade modal if not first-run. During first-run,
-      // the onboarding modal takes priority and visitors shouldn't be hit
-      // with a second overlay before they've even seen the grid.
-      if (onboarded) {
-        setShowUpgradeModal(true);
-      }
     }
-  }, [onboarded]);
+  }, []);
 
   // Get selected building for property panel
   const selectedBuilding = currentPlan?.buildings.find(
@@ -372,7 +367,7 @@ export default function App() {
       {/* First-run onboarding for brand-new users (empty plan, never onboarded) */}
       {showOnboarding && (
         <OnboardingModal
-          onStampAndShare={(names) => {
+          onStampAndShare={async (names) => {
             if (currentPlan.buildings.length === 0) {
               console.error('[onboarding] Cannot share empty plan - template not yet applied');
               return;
@@ -380,8 +375,27 @@ export default function App() {
             updatePlan({ buildings: stampHqNames(currentPlan.buildings, names) });
             trackEvent(Events.NAMES_STAMPED, { count: names.length });
             finishOnboarding();
-            setFirstRunShare(true);
-            setShareTab('collaborate');
+            
+            // Generate share link inline and copy to clipboard, then show toast.
+            // Don't open the full ShareHub on first-run — visitors should see
+            // the hive immediately after copy, not another overlay to dismiss.
+            try {
+              const { getOrCreateShareTokens } = await import('./utils/cloudStorage');
+              const { copyToClipboard } = await import('./utils/storage');
+              const tokens = await getOrCreateShareTokens(currentPlan.id);
+              const baseUrl = window.location.origin + window.location.pathname;
+              const viewUrl = `${baseUrl}?view=${tokens.view_token}`;
+              const ok = await copyToClipboard(viewUrl);
+              if (ok) {
+                trackEvent(Events.COLLAB_LINK_COPIED, { type: 'view', source: 'first_run' });
+                showToast('✓ Link copied! Paste it in Discord so your alliance can see their spots.');
+              } else {
+                showToast('Link ready — tap Share to copy it');
+              }
+            } catch (e) {
+              console.error('[first-run] share link generation failed:', e);
+              showToast('⚠️ Could not generate link — tap Share to try again');
+            }
           }}
           onStartBlank={() => {
             if (currentPlan.buildings.length > 0) clearBuildings();
@@ -468,42 +482,45 @@ export default function App() {
         </Suspense>
       )}
 
-      {/* Floating Buttons */}
-      <div className="floating-buttons">
-        {/* Pro Badge or Upgrade Button */}
-        {isPro ? (
-          <button 
-            className="pro-fab"
-            onClick={() => setShowUpgradeModal(true)}
-            title="Pro Member"
-          >
-            👑
-          </button>
-        ) : (
-          <button 
-            className="upgrade-fab"
+      {/* Floating Buttons - Hidden during first-run to avoid being the only
+           tap targets when visitor has not yet seen the hive */}
+      {onboarded && (
+        <div className="floating-buttons">
+          {/* Pro Badge or Upgrade Button */}
+          {isPro ? (
+            <button 
+              className="pro-fab"
+              onClick={() => setShowUpgradeModal(true)}
+              title="Pro Member"
+            >
+              👑
+            </button>
+          ) : (
+            <button 
+              className="upgrade-fab"
+              onClick={() => {
+                trackEvent(Events.UPGRADE_MODAL_OPENED, { source: 'fab' });
+                setShowUpgradeModal(true);
+              }}
+              title="Upgrade to Pro"
+            >
+              ⭐
+            </button>
+          )}
+          
+          {/* Help Button */}
+          <button
+            className="help-fab"
             onClick={() => {
-              trackEvent(Events.UPGRADE_MODAL_OPENED, { source: 'fab' });
-              setShowUpgradeModal(true);
+              trackEvent(Events.HELP_OPENED);
+              setShowHelpModal(true);
             }}
-            title="Upgrade to Pro"
+            title="Help & User Guide"
           >
-            ⭐
+            ❓
           </button>
-        )}
-        
-        {/* Help Button */}
-        <button
-          className="help-fab"
-          onClick={() => {
-            trackEvent(Events.HELP_OPENED);
-            setShowHelpModal(true);
-          }}
-          title="Help & User Guide"
-        >
-          ❓
-        </button>
-      </div>
+        </div>
+      )}
 
       {/* Mobile tip */}
       {toast && <div className="app-toast">{toast}</div>}
