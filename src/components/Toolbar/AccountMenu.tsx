@@ -2,11 +2,17 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../lib/auth';
 import './AccountMenu.css';
 
+const ONBOARDING_KEY = 'hivewar-onboarded-v1';
+
 export default function AccountMenu() {
   const { user, isAnonymous, loading, signInWithDiscord, signInWithGoogle, signOut } =
     useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  // Hide during first-run to avoid being a shiny tap target before
+  // the visitor has seen the hive or dismissed the onboarding modal.
+  const onboarded = !!localStorage.getItem(ONBOARDING_KEY);
 
   useEffect(() => {
     if (!open) return;
@@ -19,7 +25,7 @@ export default function AccountMenu() {
     return () => document.removeEventListener('mousedown', onClick);
   }, [open]);
 
-  if (loading || !user) return null;
+  if (loading || !user || !onboarded) return null;
 
   const meta = user.user_metadata as
     | { avatar_url?: string; full_name?: string; name?: string; user_name?: string }
