@@ -69,6 +69,8 @@ export function useHivePlan() {
   const [joinedViaShareLink, setJoinedViaShareLink] = useState(false);
   // Track if user is in view-only mode (from ?view= link)
   const [isViewOnly, setIsViewOnly] = useState(false);
+  // Track bootstrap errors for user feedback
+  const [bootstrapError, setBootstrapError] = useState<string | null>(null);
 
   // Live editing lock for the currently-viewed plan. Null when the plan
   // is unshared (only one user) or when the lock state is still loading.
@@ -139,8 +141,8 @@ export function useHivePlan() {
         } catch (e) {
           console.error('[plan] joinPlanByToken failed:', e);
           const msg = e instanceof Error ? e.message : 'That share link is invalid or expired.';
-          alert(msg);
-          // Don't proceed if join failed
+          setBootstrapError(msg);
+          // Don't proceed with normal bootstrap if join failed
           return;
         }
       }
@@ -191,13 +193,23 @@ export function useHivePlan() {
       if (joinedPlanId) {
         let joined = cloudPlans.find((p: HivePlan) => p.id === joinedPlanId);
         if (!joined) {
-          // Race: realtime / RLS might lag, fetch directly.
-          const fetched = await withTimeout(
-            getPlanById(joinedPlanId),
-            BOOTSTRAP_TIMEOUT_MS,
-            null
-          );
-          if (cancelled) return;
+          // Race: realtime / RLS might lag, fetch directly with retries.
+          // Try up to 3 times with a short delay between attempts.
+          let fetched: HivePlan | null = null;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            fetched = await withTimeout(
+              getPlanById(joinedPlanId),
+              BOOTSTRAP_TIMEOUT_MS,
+              null
+            );
+            if (cancelled) return;
+            if (fetched) break;
+            // Wait 1s before retry, except on the last attempt
+            if (attempt < 2) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+          
           if (fetched) {
             joined = fetched;
             setPlans([fetched, ...cloudPlans]);
@@ -209,8 +221,11 @@ export function useHivePlan() {
           saveCurrentPlanId(joined.id);
           return;
         }
-        // If joined plan not found, don't create empty plan - user came from share link
-        console.error('[plan] Joined plan not found, stopping bootstrap');
+        // If joined plan not found after retries, show error instead of hanging
+        console.error('[plan] Joined plan not found after retries');
+        setBootstrapError(
+          'Unable to load the shared plan. Please check your connection and try refreshing the page.'
+        );
         return;
       }
 
@@ -728,6 +743,12 @@ export function useHivePlan() {
     }
   }, [currentPlan]);
 
+  // Retry bootstrap after an error (e.g., network failure on view-only link)
+  const retryBootstrap = useCallback(() => {
+    setBootstrapError(null);
+    window.location.reload();
+  }, []);
+
   return {
     // State
     plans,
@@ -739,6 +760,10 @@ export function useHivePlan() {
     // Share link tracking
     joinedViaShareLink,
     isViewOnly,
+
+    // Error handling
+    bootstrapError,
+    retryBootstrap,
 
     // Live-collab state
     lockState,

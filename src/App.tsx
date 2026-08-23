@@ -39,6 +39,8 @@ export default function App() {
     canRedo,
     joinedViaShareLink,
     isViewOnly,
+    bootstrapError,
+    retryBootstrap,
     addBuilding,
     updateBuilding,
     deleteBuilding,
@@ -210,12 +212,34 @@ export default function App() {
   const defensePower = currentPlan ? calculateDefensePower(currentPlan.buildings) : 0;
 
   if (!currentPlan) {
-  return (
+    return (
       <div className="loading-screen">
         <div className="loading-content">
           <div className="loading-icon">🏰</div>
           <h1>HiveWar Pro</h1>
-          <p>Loading your hive plans...</p>
+          {bootstrapError ? (
+            <>
+              <p style={{ color: '#ff6b6b', marginTop: '1rem' }}>{bootstrapError}</p>
+              <button 
+                onClick={retryBootstrap}
+                style={{
+                  marginTop: '1rem',
+                  padding: '0.75rem 1.5rem',
+                  fontSize: '1rem',
+                  backgroundColor: '#4a90e2',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                }}
+              >
+                Retry
+              </button>
+            </>
+          ) : (
+            <p>Loading your hive plans...</p>
+          )}
         </div>
       </div>
     );
