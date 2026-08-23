@@ -69,6 +69,8 @@ export function useHivePlan() {
   const [joinedViaShareLink, setJoinedViaShareLink] = useState(false);
   // Track if user is in view-only mode (from ?view= link)
   const [isViewOnly, setIsViewOnly] = useState(false);
+  // Track bootstrap errors for user feedback
+  const [bootstrapError, setBootstrapError] = useState<string | null>(null);
   
   // Guard to prevent bootstrap from creating multiple plans if effect runs multiple times
   const bootstrappedRef = useRef(false);
@@ -139,12 +141,21 @@ export function useHivePlan() {
           }
           
           trackEvent(Events.JOINED_VIA_LINK, { role: result.role });
-          // Keep ?view= and ?share= in URL so refresh preserves the session
+          
+          // Keep the ?view= param for view-only links (requirement: URL keeps ?view=)
+          // Only remove ?share= tokens to avoid re-joining on refresh
+          if (!isViewOnlyLink) {
+            params.delete('share');
+            const newSearch = params.toString();
+            const newUrl =
+              window.location.pathname + (newSearch ? '?' + newSearch : '') + window.location.hash;
+            window.history.replaceState({}, '', newUrl);
+          }
         } catch (e) {
           console.error('[plan] joinPlanByToken failed:', e);
           const msg = e instanceof Error ? e.message : 'That share link is invalid or expired.';
-          alert(msg);
-          // Don't proceed if join failed
+          setBootstrapError(msg);
+          // Don't proceed with normal bootstrap if join failed
           return;
         }
       }
@@ -160,23 +171,6 @@ export function useHivePlan() {
         sessionStorage.setItem('hivewar-view-only', 'true');
         window.history.replaceState({}, '', window.location.pathname);
         // Don't create any new plans for view-only users
-        return;
-      }
-
-      // If user joined via share/view link but plan fetch failed, don't create empty plan
-      // Only check joinedPlanId here (not wasViewOnly, which we may have just cleared if stale)
-      if (joinedPlanId) {
-        // They came from a share link - use cached data if available, otherwise show loading
-        // but don't create a new "My First Hive" plan
-        const cachedPlans = loadPlansFromStorage();
-        if (cachedPlans.length > 0) {
-          setPlans(cachedPlans);
-          const current = cachedPlans.find(p => p.id === joinedPlanId);
-          if (current) {
-            setCurrentPlan(current);
-            saveCurrentPlanId(current.id);
-          }
-        }
         return;
       }
 
@@ -213,13 +207,23 @@ export function useHivePlan() {
       if (joinedPlanId) {
         let joined = cloudPlans.find((p: HivePlan) => p.id === joinedPlanId);
         if (!joined) {
-          // Race: realtime / RLS might lag, fetch directly.
-          const fetched = await withTimeout(
-            getPlanById(joinedPlanId),
-            BOOTSTRAP_TIMEOUT_MS,
-            null
-          );
-          if (cancelled) return;
+          // Race: realtime / RLS might lag, fetch directly with retries.
+          // Try up to 3 times with a short delay between attempts.
+          let fetched: HivePlan | null = null;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            fetched = await withTimeout(
+              getPlanById(joinedPlanId),
+              BOOTSTRAP_TIMEOUT_MS,
+              null
+            );
+            if (cancelled) return;
+            if (fetched) break;
+            // Wait 1s before retry, except on the last attempt
+            if (attempt < 2) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+          
           if (fetched) {
             joined = fetched;
             setPlans([fetched, ...cloudPlans]);
@@ -231,8 +235,11 @@ export function useHivePlan() {
           saveCurrentPlanId(joined.id);
           return;
         }
-        // If joined plan not found, don't create empty plan - user came from share link
-        console.error('[plan] Joined plan not found, stopping bootstrap');
+        // If joined plan not found after retries, show error instead of hanging
+        console.error('[plan] Joined plan not found after retries');
+        setBootstrapError(
+          'Unable to load the shared plan. Please check your connection and try refreshing the page.'
+        );
         return;
       }
 
@@ -759,6 +766,12 @@ export function useHivePlan() {
     }
   }, [currentPlan]);
 
+  // Retry bootstrap after an error (e.g., network failure on view-only link)
+  const retryBootstrap = useCallback(() => {
+    setBootstrapError(null);
+    window.location.reload();
+  }, []);
+
   return {
     // State
     plans,
@@ -770,6 +783,10 @@ export function useHivePlan() {
     // Share link tracking
     joinedViaShareLink,
     isViewOnly,
+
+    // Error handling
+    bootstrapError,
+    retryBootstrap,
 
     // Live-collab state
     lockState,
