@@ -80,33 +80,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     async function bootstrap() {
-      const {
-        data: { session: existing },
-      } = await supabase.auth.getSession();
-      if (cancelled) return;
+      const timeout = setTimeout(() => {
+        if (!cancelled) {
+          console.error('[auth] Bootstrap timeout after 10s');
+          setLoading(false);
+        }
+      }, 10000); // 10 second timeout for auth bootstrap
+      
+      try {
+        const {
+          data: { session: existing },
+        } = await supabase.auth.getSession();
+        if (cancelled) return;
 
-      if (existing) {
-        stripAuthParamsFromUrl();
-        trackRegistrationIfPending(existing);
-        setSession(existing);
+        if (existing) {
+          stripAuthParamsFromUrl();
+          trackRegistrationIfPending(existing);
+          setSession(existing);
+          clearTimeout(timeout);
+          setLoading(false);
+          return;
+        }
+
+        // No session yet — sign in anonymously so the user gets a real
+        // auth.users row and their plans can be persisted to the cloud.
+        // They can upgrade to Discord/Google later without losing data.
+        const { data, error } = await supabase.auth.signInAnonymously();
+        if (cancelled) return;
+
+        if (error) {
+          console.error('[auth] anonymous sign-in failed:', error);
+          clearTimeout(timeout);
+          setLoading(false);
+          return;
+        }
+
+        setSession(data.session);
+        clearTimeout(timeout);
         setLoading(false);
-        return;
-      }
-
-      // No session yet — sign in anonymously so the user gets a real
-      // auth.users row and their plans can be persisted to the cloud.
-      // They can upgrade to Discord/Google later without losing data.
-      const { data, error } = await supabase.auth.signInAnonymously();
-      if (cancelled) return;
-
-      if (error) {
-        console.error('[auth] anonymous sign-in failed:', error);
+      } catch (e) {
+        console.error('[auth] bootstrap failed:', e);
+        clearTimeout(timeout);
         setLoading(false);
-        return;
       }
-
-      setSession(data.session);
-      setLoading(false);
     }
 
     void bootstrap();

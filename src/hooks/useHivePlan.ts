@@ -322,7 +322,14 @@ export function useHivePlan() {
       }
     }
 
-    bootstrap().catch((e) => console.error('[plan] bootstrap failed:', e));
+    bootstrap().catch((e) => {
+      console.error('[plan] bootstrap failed:', e);
+      if (!bootstrappedRef.current) {
+        setBootstrapError(
+          'Failed to load your plans. Please check your connection and try again.'
+        );
+      }
+    });
 
     return () => {
       cancelled = true;
