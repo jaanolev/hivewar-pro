@@ -118,6 +118,26 @@ export function useHivePlan() {
         sessionStorage.removeItem('hivewar-view-only');
       }
       
+      // REFRESH FIX: If we have a view token AND this is a refresh (wasViewOnly flag present),
+      // optimistically load from cache immediately to avoid showing loading screen.
+      // The rest of bootstrap will still run to verify/update from backend.
+      if (collabToken && wasViewOnly) {
+        const cachedPlans = loadPlansFromStorage();
+        if (cachedPlans.length > 0) {
+          setPlans(cachedPlans);
+          // Find the most recently updated plan or first plan
+          const mostRecent = cachedPlans.reduce((latest, p) => 
+            (!latest || p.updatedAt > latest.updatedAt) ? p : latest, 
+            cachedPlans[0]
+          );
+          setCurrentPlan(mostRecent);
+          saveCurrentPlanId(mostRecent.id);
+          // Set view-only state immediately
+          setIsViewOnly(true);
+          setJoinedViaShareLink(true);
+        }
+      }
+      
       if (collabToken) {
         try {
           // Timeout guard: if joinPlanByToken hangs, fail fast so the user
