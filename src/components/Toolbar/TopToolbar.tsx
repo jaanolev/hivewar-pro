@@ -21,6 +21,7 @@ interface TopToolbarProps {
   canRedo: boolean;
   buildingCount: number;
   defensePower: number;
+  isViewOnly?: boolean;
 }
 
 export default function TopToolbar({
@@ -42,13 +43,19 @@ export default function TopToolbar({
   canUndo,
   canRedo,
   buildingCount,
-  defensePower
+  defensePower,
+  isViewOnly = false,
 }: TopToolbarProps) {
-  const tools: { mode: ToolMode; icon: string; label: string }[] = [
-    { mode: 'select', icon: '👆', label: 'Select' },
-    { mode: 'pan', icon: '✋', label: 'Pan' },
-    { mode: 'delete', icon: '🗑️', label: 'Delete' },
-  ];
+  const tools: { mode: ToolMode; icon: string; label: string }[] = isViewOnly
+    ? [
+        { mode: 'select', icon: '👆', label: 'Select' },
+        { mode: 'pan', icon: '✋', label: 'Pan' },
+      ]
+    : [
+        { mode: 'select', icon: '👆', label: 'Select' },
+        { mode: 'pan', icon: '✋', label: 'Pan' },
+        { mode: 'delete', icon: '🗑️', label: 'Delete' },
+      ];
 
   return (
     <div className="top-toolbar">
@@ -81,26 +88,30 @@ export default function TopToolbar({
 
         <div className="divider" />
 
-        <div className="tool-group tool-group--history">
-          <button
-            className="tool-btn"
-            onClick={onUndo}
-            disabled={!canUndo}
-            title="Undo"
-          >
-            ↩️
-          </button>
-          <button
-            className="tool-btn"
-            onClick={onRedo}
-            disabled={!canRedo}
-            title="Redo"
-          >
-            ↪️
-          </button>
-        </div>
+        {!isViewOnly && (
+          <>
+            <div className="tool-group tool-group--history">
+              <button
+                className="tool-btn"
+                onClick={onUndo}
+                disabled={!canUndo}
+                title="Undo"
+              >
+                ↩️
+              </button>
+              <button
+                className="tool-btn"
+                onClick={onRedo}
+                disabled={!canRedo}
+                title="Redo"
+              >
+                ↪️
+              </button>
+            </div>
 
-        <div className="divider" />
+            <div className="divider" />
+          </>
+        )}
 
         <div className="tool-group tool-group--view">
           <button
@@ -121,16 +132,20 @@ export default function TopToolbar({
       </div>
 
       <div className="toolbar-right">
-        <button className="action-btn templates glow-pulse" onClick={onTemplatesOpen} title="Browse pre-built hive layouts">
-          <span className="btn-icon">📋</span>
-          <span className="btn-label">Templates</span>
-        </button>
-        <button className="action-btn danger" onClick={onClear} title="Clear All">
-          <span className="btn-icon">🗑️</span>
-        </button>
-        <button className="action-btn action-btn--save" onClick={onSave} title="Save">
-          <span className="btn-icon">💾</span>
-        </button>
+        {!isViewOnly && (
+          <>
+            <button className="action-btn templates glow-pulse" onClick={onTemplatesOpen} title="Browse pre-built hive layouts">
+              <span className="btn-icon">📋</span>
+              <span className="btn-label">Templates</span>
+            </button>
+            <button className="action-btn danger" onClick={onClear} title="Clear All">
+              <span className="btn-icon">🗑️</span>
+            </button>
+            <button className="action-btn action-btn--save" onClick={onSave} title="Save">
+              <span className="btn-icon">💾</span>
+            </button>
+          </>
+        )}
         <button
           className="action-btn primary"
           onClick={onExport}
