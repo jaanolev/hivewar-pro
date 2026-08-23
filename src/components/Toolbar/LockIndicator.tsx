@@ -10,6 +10,7 @@ interface Props {
   hasPeers: boolean;
   onTake: () => void;
   onRelease: () => void;
+  isViewOnly?: boolean;
 }
 
 export default function LockIndicator({
@@ -19,6 +20,7 @@ export default function LockIndicator({
   hasPeers,
   onTake,
   onRelease,
+  isViewOnly = false,
 }: Props) {
   // Tick a clock so any "x ago" relative timestamps refresh without
   // bloating the parent's render cycle.
@@ -28,6 +30,9 @@ export default function LockIndicator({
     const id = window.setInterval(() => setTick((t) => t + 1), 10_000);
     return () => window.clearInterval(id);
   }, [otherUserHoldsLock]);
+
+  // View-only watchers never see presence chips or lock CTAs.
+  if (isViewOnly) return null;
 
   // Solo: nothing to coordinate, hide the pill.
   if (!hasPeers) return null;
