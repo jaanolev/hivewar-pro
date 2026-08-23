@@ -274,6 +274,7 @@ export default function App() {
         hasPeers={peerCount > 0}
         onTake={takeLock}
         onRelease={releaseLock}
+        isViewOnly={isViewOnly}
       />
 
       {/* Top Toolbar */}
