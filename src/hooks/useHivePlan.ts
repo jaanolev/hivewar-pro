@@ -172,11 +172,24 @@ export function useHivePlan() {
             window.history.replaceState({}, '', newUrl);
           }
         } catch (e) {
+          // Token is invalid, expired, or network failed. Instead of showing a
+          // dead-end error screen, fall through to normal first-run so the user
+          // sees Diamond Defense + "Copy alliance link" modal.
           console.error('[plan] joinPlanByToken failed:', e);
-          const msg = e instanceof Error ? e.message : 'That share link is invalid or expired.';
-          setBootstrapError(msg);
-          // Don't proceed with normal bootstrap if join failed
-          return;
+          console.log('[plan] Falling through to normal first-run experience');
+          
+          // Remove bad token from URL so refresh doesn't loop the error
+          params.delete('view');
+          params.delete('share');
+          const newSearch = params.toString();
+          const newUrl =
+            window.location.pathname + (newSearch ? '?' + newSearch : '') + window.location.hash;
+          window.history.replaceState({}, '', newUrl);
+          
+          // Clear any stale view-only flag
+          sessionStorage.removeItem('hivewar-view-only');
+          
+          // Continue with normal bootstrap below (don't return early)
         }
       }
 
