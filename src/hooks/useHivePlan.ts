@@ -130,12 +130,7 @@ export function useHivePlan() {
           }
           
           trackEvent(Events.JOINED_VIA_LINK, { role: result.role });
-          params.delete('share');
-          params.delete('view');
-          const newSearch = params.toString();
-          const newUrl =
-            window.location.pathname + (newSearch ? '?' + newSearch : '') + window.location.hash;
-          window.history.replaceState({}, '', newUrl);
+          // Keep ?view= and ?share= in URL so refresh preserves the session
         } catch (e) {
           console.error('[plan] joinPlanByToken failed:', e);
           const msg = e instanceof Error ? e.message : 'That share link is invalid or expired.';
