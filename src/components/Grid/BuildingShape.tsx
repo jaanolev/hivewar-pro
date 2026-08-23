@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { Group, Rect, Text } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type { PlacedBuilding, ToolMode } from '../../types';
@@ -24,6 +25,33 @@ export default function BuildingShape({
   canEdit,
 }: BuildingShapeProps) {
   const buildingType = getBuildingById(building.buildingTypeId);
+  const [revealProgress, setRevealProgress] = useState(0);
+  const hasRevealedRef = useRef(false);
+
+  // Hive reveal: short fade-in/scale when building first appears
+  useEffect(() => {
+    if (hasRevealedRef.current) return;
+    hasRevealedRef.current = true;
+    
+    const startTime = Date.now();
+    const duration = 400; // 400ms reveal
+    
+    function animate() {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Ease-out quad for smooth landing
+      const eased = 1 - (1 - progress) * (1 - progress);
+      setRevealProgress(eased);
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    }
+    
+    requestAnimationFrame(animate);
+  }, []);
+
   if (!buildingType) return null;
 
   // Handle rotation for width/height
@@ -44,10 +72,19 @@ export default function BuildingShape({
     }
   };
 
+  // Reveal animation: fade + subtle scale from 0.9 to 1.0
+  const opacity = 0.3 + revealProgress * 0.7;
+  const scale = 0.9 + revealProgress * 0.1;
+
   return (
     <Group
       x={pos.x}
       y={pos.y}
+      opacity={opacity}
+      scaleX={scale}
+      scaleY={scale}
+      offsetX={displayWidth * (1 - scale) / 2}
+      offsetY={displayHeight * (1 - scale) / 2}
       draggable={canEdit && toolMode === 'select' && isSelected}
       onDragStart={(e) => {
         e.cancelBubble = true;

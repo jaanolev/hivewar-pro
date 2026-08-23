@@ -28,6 +28,21 @@ const MIGRATED_KEY = 'hivewar-migrated-to-cloud';
 const SAVE_DEBOUNCE_MS = 500;
 const HEARTBEAT_MS = 60_000;
 const LOCK_STALE_MS = 3 * 60_000;
+const BOOTSTRAP_TIMEOUT_MS = 8_000;
+
+// Wrap async operations with timeout to prevent silent hangs
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  fallback: T
+): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => 
+      setTimeout(() => resolve(fallback), timeoutMs)
+    ),
+  ]);
+}
 
 export interface EditLockState {
   editorUserId: string | null;
@@ -81,7 +96,16 @@ export function useHivePlan() {
       let joinedPlanId: string | null = null;
       if (collabToken) {
         try {
-          const result = await joinPlanByToken(collabToken);
+          // Timeout guard: if joinPlanByToken hangs, fail fast so the user
+          // can refresh or continue rather than staring at the spinner forever.
+          const result = await withTimeout(
+            joinPlanByToken(collabToken),
+            BOOTSTRAP_TIMEOUT_MS,
+            null as any
+          );
+          if (!result) {
+            throw new Error('Join timed out. Check your connection and try again.');
+          }
           if (cancelled) return;
           joinedPlanId = result.plan_id;
           trackEvent(Events.JOINED_VIA_LINK, { role: result.role });
@@ -93,7 +117,8 @@ export function useHivePlan() {
           window.history.replaceState({}, '', newUrl);
         } catch (e) {
           console.error('[plan] joinPlanByToken failed:', e);
-          alert('That share link is invalid or expired.');
+          const msg = e instanceof Error ? e.message : 'That share link is invalid or expired.';
+          alert(msg);
         }
       }
 
@@ -106,7 +131,9 @@ export function useHivePlan() {
         window.history.replaceState({}, '', window.location.pathname);
       }
 
-      let cloudPlans = await listPlans();
+      // Timeout guard: if listPlans hangs, fall back to empty array so the
+      // user can create a new plan rather than being stuck on the spinner.
+      let cloudPlans = await withTimeout(listPlans(), BOOTSTRAP_TIMEOUT_MS, []);
       if (cancelled) return;
 
       // First-time migration: if cloud is empty and we have localStorage
@@ -136,7 +163,11 @@ export function useHivePlan() {
         let joined = cloudPlans.find((p) => p.id === joinedPlanId);
         if (!joined) {
           // Race: realtime / RLS might lag, fetch directly.
-          const fetched = await getPlanById(joinedPlanId);
+          const fetched = await withTimeout(
+            getPlanById(joinedPlanId),
+            BOOTSTRAP_TIMEOUT_MS,
+            null
+          );
           if (cancelled) return;
           if (fetched) {
             joined = fetched;
