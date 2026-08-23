@@ -280,6 +280,7 @@ export default function App() {
           <CanvasHints
             buildings={currentPlan.buildings}
             selectedBuildingTypeId={editorState.selectedBuildingTypeId}
+            isViewOnly={isViewOnly}
           />
         )}
       </main>

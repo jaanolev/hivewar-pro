@@ -69,6 +69,9 @@ export function useHivePlan() {
   const [joinedViaShareLink, setJoinedViaShareLink] = useState(false);
   // Track if user is in view-only mode (from ?view= link)
   const [isViewOnly, setIsViewOnly] = useState(false);
+  
+  // Guard to prevent bootstrap from creating multiple plans if effect runs multiple times
+  const bootstrappedRef = useRef(false);
 
   // Live editing lock for the currently-viewed plan. Null when the plan
   // is unshared (only one user) or when the lock state is still loading.
@@ -90,6 +93,9 @@ export function useHivePlan() {
   // first run, fall back to creating an empty plan for brand-new users.
   useEffect(() => {
     if (authLoading || !user) return;
+    // Prevent duplicate bootstraps if effect runs multiple times
+    if (bootstrappedRef.current) return;
+    bootstrappedRef.current = true;
 
     let cancelled = false;
 
@@ -155,6 +161,25 @@ export function useHivePlan() {
         setIsViewOnly(true);
         sessionStorage.setItem('hivewar-view-only', 'true');
         window.history.replaceState({}, '', window.location.pathname);
+        // Don't create any new plans for view-only users
+        return;
+      }
+
+      // If user joined via share/view link but plan fetch failed, don't create empty plan
+      if (wasViewOnly || joinedPlanId) {
+        // They came from a share link - use cached data if available, otherwise show loading
+        // but don't create a new "My First Hive" plan
+        const cachedPlans = loadPlansFromStorage();
+        if (cachedPlans.length > 0) {
+          setPlans(cachedPlans);
+          const current = joinedPlanId 
+            ? cachedPlans.find(p => p.id === joinedPlanId)
+            : cachedPlans[0];
+          if (current) {
+            setCurrentPlan(current);
+            saveCurrentPlanId(current.id);
+          }
+        }
         return;
       }
 
@@ -225,8 +250,17 @@ export function useHivePlan() {
         setCurrentPlan(firstNonEmpty);
         saveCurrentPlanId(firstNonEmpty.id);
       } else {
-        // No plans exist in cloud or cache - create the initial empty plan
+        // No plans exist in cloud or cache - create first plan with Diamond Defense template
+        // to avoid creating empty plan that later gets templated (which causes race condition duplicates)
         const newPlan = createEmptyPlan('My First Hive');
+        // Apply Diamond Defense template directly during bootstrap
+        const diamondTemplate = (await import('../data/templates')).HIVE_TEMPLATES.find(t => t.id === 'diamond-defense');
+        if (diamondTemplate) {
+          newPlan.buildings = diamondTemplate.buildings.map(b => ({
+            ...b,
+            id: generateId()
+          }));
+        }
         await upsertPlan(newPlan, user!.id);
         if (cancelled) return;
         setPlans([newPlan]);
