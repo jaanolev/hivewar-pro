@@ -21,8 +21,7 @@ function pickProgressiveHint(buildings: PlacedBuilding[]): Hint | null {
   if (buildings.length === 0) {
     return {
       id: 'place-hq',
-      message:
-        'Tap "Buildings", pick Headquarters, then tap the grid to place your HQ.',
+      message: 'Tap the grid to place your HQ.',
     };
   }
   if (!categories.has('defense')) {

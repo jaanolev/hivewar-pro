@@ -67,7 +67,13 @@ export default function App() {
   } = useHivePlan();
 
   const stageRef = useRef<any>(null);
-  const [paletteOpen, setPaletteOpen] = useState(true);
+  // On mobile (≤768px), start with palette closed so the grid is tappable.
+  // Recordings showed visitors never placed buildings when a bottom drawer
+  // covered the lower third of their screen on first load.
+  const [paletteOpen, setPaletteOpen] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.innerWidth > 768;
+  });
   const [shareTab, setShareTab] = useState<ShareTab | null>(null);
   const [showMenuModal, setShowMenuModal] = useState(false);
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
@@ -209,6 +215,15 @@ export default function App() {
     handleApplyTemplate(template.buildings);
     trackEvent(Events.ONBOARDING_CHOICE, { choice: 'template', source: 'auto' });
   }, [currentPlan, onboarded, handleApplyTemplate]);
+
+  // Pre-select HQ when on a blank grid, so mobile users can tap once to place
+  // instead of opening drawer → picking HQ → tapping grid (three steps).
+  useEffect(() => {
+    if (!currentPlan || isViewOnly) return;
+    if (currentPlan.buildings.length === 0 && !editorState.selectedBuildingTypeId) {
+      selectBuildingType('hq');
+    }
+  }, [currentPlan, isViewOnly, editorState.selectedBuildingTypeId, selectBuildingType]);
 
   // Calculate stats
   const buildingCount = currentPlan?.buildings.length || 0;
