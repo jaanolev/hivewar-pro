@@ -37,6 +37,8 @@ export default function App() {
     editorState,
     canUndo,
     canRedo,
+    joinedViaShareLink,
+    isViewOnly,
     addBuilding,
     updateBuilding,
     deleteBuilding,
@@ -219,7 +221,7 @@ export default function App() {
     );
   }
 
-  const showOnboarding = !onboarded && !shareTab && currentPlan.buildings.length > 0;
+  const showOnboarding = !onboarded && !shareTab && !joinedViaShareLink && currentPlan.buildings.length > 0;
 
   return (
     <div className="app">
@@ -257,6 +259,7 @@ export default function App() {
         canRedo={canRedo}
         buildingCount={buildingCount}
         defensePower={defensePower}
+        isViewOnly={isViewOnly}
       />
 
       {/* Main Grid Area */}
@@ -282,12 +285,14 @@ export default function App() {
       </main>
 
       {/* Building Palette */}
-      <BuildingPalette
-        selectedTypeId={editorState.selectedBuildingTypeId}
-        onSelectType={selectBuildingType}
-        isOpen={paletteOpen}
-        onToggle={() => setPaletteOpen(!paletteOpen)}
-      />
+      {!isViewOnly && (
+        <BuildingPalette
+          selectedTypeId={editorState.selectedBuildingTypeId}
+          onSelectType={selectBuildingType}
+          isOpen={paletteOpen}
+          onToggle={() => setPaletteOpen(!paletteOpen)}
+        />
+      )}
 
       {/* Property Panel (when building selected) */}
       {selectedBuilding && (
@@ -337,7 +342,7 @@ export default function App() {
       )}
 
       {/* One-time "what's new" announcement (yields to first-run onboarding) */}
-      {showWhatsNew && !showOnboarding && currentPlan && !shareTab && (
+      {showWhatsNew && !showOnboarding && !joinedViaShareLink && currentPlan && !shareTab && (
         <WhatsNewModal
           onClose={dismissWhatsNew}
           onTryCollab={() => {
