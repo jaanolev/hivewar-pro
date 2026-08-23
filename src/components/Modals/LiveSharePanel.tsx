@@ -30,41 +30,50 @@ export default function LiveSharePanel({ planId, autoCopyView = false }: Props) 
         }
         console.log('[LiveSharePanel] Current user:', user.id, 'is_anonymous:', user.is_anonymous);
         
-        // Verify the plan exists and we own it
-        const plan = await getPlanById(planId);
+        // Verify the plan exists (with retry for mobile timing issues)
+        let plan = null;
+        for (let i = 0; i < 3; i++) {
+          plan = await getPlanById(planId);
+          if (plan) break;
+          if (i < 2) {
+            console.log(`[LiveSharePanel] Plan not found yet, retrying in 300ms (attempt ${i + 1}/3)`);
+            await new Promise(resolve => setTimeout(resolve, 300));
+          }
+        }
+        
         if (!plan) {
           throw new Error('Plan not found. Please refresh and try again.');
         }
-        console.log('[LiveSharePanel] Plan exists:', planId);
+        console.log('[LiveSharePanel] Plan verified:', planId);
         
-        // Now create/fetch the tokens
+        // Now create/fetch the tokens (with built-in retry logic)
         const t = await getOrCreateShareTokens(planId);
         if (cancelled) return;
         setTokens(t);
       } catch (e) {
         if (cancelled) return;
-        console.error('[LiveSharePanel] getOrCreateShareTokens error:', e);
-        console.error('[LiveSharePanel] error type:', typeof e, 'is Error:', e instanceof Error);
-        console.error('[LiveSharePanel] error details:', JSON.stringify(e, null, 2));
+        console.error('[LiveSharePanel] Share link creation failed:', e);
         
-        // Extract error message from various formats
-        let raw = 'Failed to create share link.';
-        if (e instanceof Error) {
-          raw = e.message;
-        } else if (typeof e === 'object' && e !== null) {
-          // Supabase error object format
+        // Extract error message, handling Supabase's error format
+        let message = 'Failed to create share link.';
+        if (e && typeof e === 'object') {
           const err = e as any;
-          raw = err.message || err.error_description || err.error || raw;
+          // Supabase errors can be in various formats
+          message = err.message || err.error_description || err.error || err.details || message;
         } else if (typeof e === 'string') {
-          raw = e;
+          message = e;
+        } else if (e instanceof Error) {
+          message = e.message;
         }
         
-        // Show the actual error message to help diagnose issues
-        setError(
-          raw.toLowerCase().includes('owner')
-            ? "Only the plan's owner can create share links. Ask whoever created this plan to send you the link."
-            : `Failed to create share link: ${raw}`
-        );
+        // Provide helpful error messages
+        if (message.toLowerCase().includes('owner')) {
+          setError("Only the plan's owner can create share links. Ask whoever created this plan to send you the link.");
+        } else if (message.toLowerCase().includes('signed in')) {
+          setError('You must be signed in to create share links. Please refresh and try again.');
+        } else {
+          setError(`Failed to create share link: ${message}`);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
