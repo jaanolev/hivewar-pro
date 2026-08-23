@@ -50,6 +50,11 @@ export function useHivePlan() {
   const [history, setHistory] = useState<PlacedBuilding[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
 
+  // Track if user joined via share/view link to suppress onboarding
+  const [joinedViaShareLink, setJoinedViaShareLink] = useState(false);
+  // Track if user is in view-only mode (from ?view= link)
+  const [isViewOnly, setIsViewOnly] = useState(false);
+
   // Live editing lock for the currently-viewed plan. Null when the plan
   // is unshared (only one user) or when the lock state is still loading.
   const [lockState, setLockState] = useState<EditLockState>({
@@ -74,16 +79,32 @@ export function useHivePlan() {
     let cancelled = false;
 
     async function bootstrap() {
+      // Check if view-only mode was preserved from a previous load
+      const wasViewOnly = sessionStorage.getItem('hivewar-view-only') === 'true';
+      if (wasViewOnly) {
+        setIsViewOnly(true);
+        setJoinedViaShareLink(true);
+      }
+
       // Live-share / view token in URL: join the plan as a collaborator,
       // then it shows up in the regular cloud plan list via RLS.
       const params = new URLSearchParams(window.location.search);
       const collabToken = params.get('share') || params.get('view');
+      const isViewOnlyLink = !!params.get('view');
       let joinedPlanId: string | null = null;
       if (collabToken) {
         try {
           const result = await joinPlanByToken(collabToken);
           if (cancelled) return;
           joinedPlanId = result.plan_id;
+          setJoinedViaShareLink(true);
+          
+          // Track view-only mode for this session
+          if (isViewOnlyLink || result.role === 'viewer') {
+            setIsViewOnly(true);
+            sessionStorage.setItem('hivewar-view-only', 'true');
+          }
+          
           trackEvent(Events.JOINED_VIA_LINK, { role: result.role });
           params.delete('share');
           params.delete('view');
@@ -94,6 +115,8 @@ export function useHivePlan() {
         } catch (e) {
           console.error('[plan] joinPlanByToken failed:', e);
           alert('That share link is invalid or expired.');
+          // Don't proceed if join failed
+          return;
         }
       }
 
@@ -103,7 +126,11 @@ export function useHivePlan() {
       if (urlPlan && !joinedPlanId) {
         if (cancelled) return;
         setCurrentPlan(urlPlan);
+        setJoinedViaShareLink(true);
+        setIsViewOnly(true);
+        sessionStorage.setItem('hivewar-view-only', 'true');
         window.history.replaceState({}, '', window.location.pathname);
+        return;
       }
 
       let cloudPlans = await listPlans();
@@ -112,7 +139,7 @@ export function useHivePlan() {
       // First-time migration: if cloud is empty and we have localStorage
       // plans from the pre-cloud era, push them up.
       const alreadyMigrated = localStorage.getItem(MIGRATED_KEY) === 'true';
-      if (cloudPlans.length === 0 && !alreadyMigrated) {
+      if (cloudPlans.length === 0 && !alreadyMigrated && !joinedPlanId) {
         const localPlans = loadPlansFromStorage();
         if (localPlans.length > 0) {
           await Promise.all(localPlans.map((p) => upsertPlan(p, user!.id)));
@@ -125,11 +152,6 @@ export function useHivePlan() {
       setPlans(cloudPlans);
       // Mirror to localStorage as an offline cache.
       savePlansToStorage(cloudPlans);
-
-      if (urlPlan && !joinedPlanId) {
-        // currentPlan already set to URL snapshot plan above.
-        return;
-      }
 
       // If we just joined a plan via share/view token, switch to it.
       if (joinedPlanId) {
@@ -149,6 +171,9 @@ export function useHivePlan() {
           saveCurrentPlanId(joined.id);
           return;
         }
+        // If joined plan not found, don't create empty plan - user came from share link
+        console.error('[plan] Joined plan not found, stopping bootstrap');
+        return;
       }
 
       const currentId = loadCurrentPlanId();
@@ -669,6 +694,10 @@ export function useHivePlan() {
     editorState,
     canUndo: historyIndex >= 0,
     canRedo: historyIndex < history.length - 1,
+
+    // Share link tracking
+    joinedViaShareLink,
+    isViewOnly,
 
     // Live-collab state
     lockState,
