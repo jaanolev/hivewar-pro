@@ -36,6 +36,7 @@ export default function HiveGrid({
   const [viewport, setViewport] = useState<ViewportState>({ x: 0, y: 0, scale: 0.8 });
   const [, setIsDragging] = useState(false);
   const prevBuildingCountRef = useRef(buildings.length);
+  const hadEmptyBuildingsRef = useRef(buildings.length === 0);
 
   // Handle container resize
   useEffect(() => {
@@ -174,6 +175,27 @@ export default function HiveGrid({
       return () => cancelAnimationFrame(id);
     }
   }, [buildings.length, fitToView]);
+
+  // Auto-fit on first load when buildings are already present (e.g., shared
+  // plan on mobile). Without this, view-only links on phones show an empty-
+  // looking canvas until the user taps "Fit hive to screen".
+  const hasAutoFittedRef = useRef(false);
+  useEffect(() => {
+    // Only run once after we've performed the fit
+    if (hasAutoFittedRef.current) return;
+    // Only when buildings are already loaded (shared/view links)
+    if (buildings.length < 5) return;
+    // Skip if buildings were ever empty (template-apply scenario)
+    // — the effect above already handles that case
+    if (hadEmptyBuildingsRef.current) return;
+    // Only on mobile/tablet viewports where zoom-out is harder
+    // (dimensions.width is measured from the container on mount, so this is reliable)
+    if (dimensions.width > 768) return;
+    
+    hasAutoFittedRef.current = true;
+    const id = requestAnimationFrame(() => fitToView());
+    return () => cancelAnimationFrame(id);
+  }, [buildings.length, dimensions.width, dimensions.height, fitToView]);
 
   // Handle stage click
   const handleStageClick = useCallback((e: KonvaEventObject<MouseEvent | TouchEvent>) => {
