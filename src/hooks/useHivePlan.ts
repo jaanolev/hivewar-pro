@@ -298,7 +298,22 @@ export function useHivePlan() {
             id: generateId()
           }));
         }
+        console.log('[plan] Creating first plan:', newPlan.id, 'for user:', user!.id);
         await upsertPlan(newPlan, user!.id);
+        console.log('[plan] First plan created and saved successfully');
+        
+        // Verify the plan was saved by fetching it back
+        try {
+          const verified = await getPlanById(newPlan.id);
+          if (verified) {
+            console.log('[plan] Verified plan exists in database:', verified.id);
+          } else {
+            console.warn('[plan] Plan not found after upsert! This may cause share link creation to fail.');
+          }
+        } catch (verifyError) {
+          console.error('[plan] Error verifying plan:', verifyError);
+        }
+        
         if (cancelled) return;
         setPlans([newPlan]);
         savePlansToStorage([newPlan]);

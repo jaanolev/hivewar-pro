@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getOrCreateShareTokens, type ShareTokens } from '../../utils/cloudStorage';
+import { getOrCreateShareTokens, getPlanById, type ShareTokens } from '../../utils/cloudStorage';
+import { supabase } from '../../lib/supabase';
 import { copyToClipboard } from '../../utils/storage';
 import { trackEvent, Events } from '../../utils/analytics';
 import { playConfirmSound } from '../../utils/audio';
@@ -22,13 +23,42 @@ export default function LiveSharePanel({ planId, autoCopyView = false }: Props) 
       setLoading(true);
       setError(null);
       try {
+        // First, verify we're authenticated
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          throw new Error('You must be signed in to create share links.');
+        }
+        console.log('[LiveSharePanel] Current user:', user.id, 'is_anonymous:', user.is_anonymous);
+        
+        // Verify the plan exists and we own it
+        const plan = await getPlanById(planId);
+        if (!plan) {
+          throw new Error('Plan not found. Please refresh and try again.');
+        }
+        console.log('[LiveSharePanel] Plan exists:', planId);
+        
+        // Now create/fetch the tokens
         const t = await getOrCreateShareTokens(planId);
         if (cancelled) return;
         setTokens(t);
       } catch (e) {
         if (cancelled) return;
         console.error('[LiveSharePanel] getOrCreateShareTokens error:', e);
-        const raw = e instanceof Error ? e.message : 'Failed to create share link.';
+        console.error('[LiveSharePanel] error type:', typeof e, 'is Error:', e instanceof Error);
+        console.error('[LiveSharePanel] error details:', JSON.stringify(e, null, 2));
+        
+        // Extract error message from various formats
+        let raw = 'Failed to create share link.';
+        if (e instanceof Error) {
+          raw = e.message;
+        } else if (typeof e === 'object' && e !== null) {
+          // Supabase error object format
+          const err = e as any;
+          raw = err.message || err.error_description || err.error || raw;
+        } else if (typeof e === 'string') {
+          raw = e;
+        }
+        
         // Show the actual error message to help diagnose issues
         setError(
           raw.toLowerCase().includes('owner')

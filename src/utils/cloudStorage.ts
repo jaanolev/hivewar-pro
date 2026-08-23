@@ -71,15 +71,24 @@ export interface ShareTokens {
 }
 
 export async function getOrCreateShareTokens(planId: string): Promise<ShareTokens> {
+  console.log('[cloud] getOrCreateShareTokens called for planId:', planId);
+  
+  // Check current auth state for debugging
+  const { data: { user } } = await supabase.auth.getUser();
+  console.log('[cloud] current user:', user?.id, 'is_anonymous:', user?.is_anonymous);
+  
   const { data, error } = await supabase.rpc('get_or_create_share_tokens', {
     plan_id_input: planId,
   });
 
   if (error) {
     console.error('[cloud] getOrCreateShareTokens failed:', error);
+    console.error('[cloud] error details:', JSON.stringify(error, null, 2));
+    console.error('[cloud] planId:', planId, 'user:', user?.id);
     throw error;
   }
 
+  console.log('[cloud] getOrCreateShareTokens success:', data);
   return data as ShareTokens;
 }
 
