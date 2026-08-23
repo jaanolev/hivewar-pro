@@ -174,23 +174,6 @@ export function useHivePlan() {
         return;
       }
 
-      // If user joined via share/view link but plan fetch failed, don't create empty plan
-      // Only check joinedPlanId here (not wasViewOnly, which we may have just cleared if stale)
-      if (joinedPlanId) {
-        // They came from a share link - use cached data if available, otherwise show loading
-        // but don't create a new "My First Hive" plan
-        const cachedPlans = loadPlansFromStorage();
-        if (cachedPlans.length > 0) {
-          setPlans(cachedPlans);
-          const current = cachedPlans.find(p => p.id === joinedPlanId);
-          if (current) {
-            setCurrentPlan(current);
-            saveCurrentPlanId(current.id);
-          }
-        }
-        return;
-      }
-
       // Timeout guard: if listPlans hangs, check localStorage cache first
       // before falling back to empty. This prevents wiping an existing plan
       // when the network is slow but we already have data.
