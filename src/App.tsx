@@ -263,7 +263,7 @@ export default function App() {
     );
   }
 
-  const showOnboarding = !onboarded && !shareTab && !joinedViaShareLink && currentPlan.buildings.length > 0;
+  const showOnboarding = !onboarded && !shareTab && !joinedViaShareLink && currentPlan.buildings.length >= 5;
 
   return (
     <div className="app">
@@ -319,7 +319,7 @@ export default function App() {
           stageRef={stageRef}
           canEdit={canEdit}
         />
-        {!showOnboarding && !shareTab && (
+        {!showOnboarding && !shareTab && onboarded && (
           <CanvasHints
             buildings={currentPlan.buildings}
             selectedBuildingTypeId={editorState.selectedBuildingTypeId}
@@ -367,6 +367,12 @@ export default function App() {
       {/* First-run onboarding for brand-new users (empty plan, never onboarded) */}
       {showOnboarding && (
         <OnboardingModal
+          onDismiss={() => {
+            // X button / overlay dismiss: just finish onboarding and show the hive.
+            // Keep Diamond Defense on the grid. Do NOT open ShareHub.
+            trackEvent(Events.ONBOARDING_CHOICE, { choice: 'dismiss' });
+            finishOnboarding();
+          }}
           onStampAndShare={async (names) => {
             if (currentPlan.buildings.length === 0) {
               console.error('[onboarding] Cannot share empty plan - template not yet applied');

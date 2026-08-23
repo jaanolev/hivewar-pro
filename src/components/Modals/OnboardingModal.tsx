@@ -6,16 +6,17 @@ import './WhatsNewModal.css';
 
 interface Props {
   onStampAndShare: (names: string[]) => void | Promise<void>;
+  onDismiss: () => void;
   onStartBlank: () => void;
 }
 
-export default function OnboardingModal({ onStampAndShare, onStartBlank }: Props) {
+export default function OnboardingModal({ onStampAndShare, onDismiss, onStartBlank }: Props) {
   const [names, setNames] = useState(['', '', '']);
   const [showNameFields, setShowNameFields] = useState(false);
   
   const handleClose = () => {
     trackEvent(Events.ONBOARDING_CHOICE, { choice: 'keep_template' });
-    onStampAndShare([]);
+    onDismiss();
   };
   
   const { dragHandlers, sheetStyle } = useDragDismiss(handleClose);
