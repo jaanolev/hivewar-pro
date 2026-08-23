@@ -110,8 +110,11 @@ export default function App() {
     if (urlParams.get('payment') === 'success') {
       // Show upgrade modal so user can enter their code/email
       setShowUpgradeModal(true);
-      // Clean up URL
-      window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+      // Clean up URL but preserve view/share params
+      urlParams.delete('payment');
+      const newSearch = urlParams.toString();
+      const newUrl = window.location.pathname + (newSearch ? '?' + newSearch : '') + window.location.hash;
+      window.history.replaceState({}, '', newUrl);
       // Track the payment completion
       trackEvent(Events.PAYMENT_COMPLETED);
     }
