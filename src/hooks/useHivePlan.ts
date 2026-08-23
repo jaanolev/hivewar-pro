@@ -158,10 +158,17 @@ export function useHivePlan() {
         return;
       }
 
-      // Timeout guard: if listPlans hangs, fall back to empty array so the
-      // user can create a new plan rather than being stuck on the spinner.
-      let cloudPlans = await withTimeout(listPlans(), BOOTSTRAP_TIMEOUT_MS, []);
+      // Timeout guard: if listPlans hangs, check localStorage cache first
+      // before falling back to empty. This prevents wiping an existing plan
+      // when the network is slow but we already have data.
+      let cloudPlans = await withTimeout(listPlans(), BOOTSTRAP_TIMEOUT_MS, null as any);
       if (cancelled) return;
+      
+      // If listPlans timed out, try loading from localStorage cache as fallback
+      if (cloudPlans === null) {
+        console.warn('[plan] listPlans timed out, using localStorage cache');
+        cloudPlans = loadPlansFromStorage();
+      }
 
       // First-time migration: if cloud is empty and we have localStorage
       // plans from the pre-cloud era, push them up.
@@ -177,12 +184,12 @@ export function useHivePlan() {
       }
 
       setPlans(cloudPlans);
-      // Mirror to localStorage as an offline cache.
+      // Mirror to localStorage as an offline cache
       savePlansToStorage(cloudPlans);
 
       // If we just joined a plan via share/view token, switch to it.
       if (joinedPlanId) {
-        let joined = cloudPlans.find((p) => p.id === joinedPlanId);
+        let joined = cloudPlans.find((p: HivePlan) => p.id === joinedPlanId);
         if (!joined) {
           // Race: realtime / RLS might lag, fetch directly.
           const fetched = await withTimeout(
@@ -208,14 +215,17 @@ export function useHivePlan() {
       }
 
       const currentId = loadCurrentPlanId();
-      const found = currentId ? cloudPlans.find((p) => p.id === currentId) : null;
+      let found = currentId ? cloudPlans.find((p: HivePlan) => p.id === currentId) : null;
 
       if (found) {
         setCurrentPlan(found);
       } else if (cloudPlans.length > 0) {
-        setCurrentPlan(cloudPlans[0]);
-        saveCurrentPlanId(cloudPlans[0].id);
+        // Current plan not in list, but other plans exist - prefer non-empty plan
+        const firstNonEmpty = cloudPlans.find((p: HivePlan) => p.buildings.length > 0) || cloudPlans[0];
+        setCurrentPlan(firstNonEmpty);
+        saveCurrentPlanId(firstNonEmpty.id);
       } else {
+        // No plans exist in cloud or cache - create the initial empty plan
         const newPlan = createEmptyPlan('My First Hive');
         await upsertPlan(newPlan, user!.id);
         if (cancelled) return;
