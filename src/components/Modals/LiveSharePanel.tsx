@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getOrCreateShareTokens, type ShareTokens } from '../../utils/cloudStorage';
+import { getOrCreateShareTokens, getPlanById, type ShareTokens } from '../../utils/cloudStorage';
+import { supabase } from '../../lib/supabase';
 import { copyToClipboard } from '../../utils/storage';
 import { trackEvent, Events } from '../../utils/analytics';
 import { playConfirmSound } from '../../utils/audio';
@@ -22,19 +23,57 @@ export default function LiveSharePanel({ planId, autoCopyView = false }: Props) 
       setLoading(true);
       setError(null);
       try {
+        // First, verify we're authenticated
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          throw new Error('You must be signed in to create share links.');
+        }
+        console.log('[LiveSharePanel] Current user:', user.id, 'is_anonymous:', user.is_anonymous);
+        
+        // Verify the plan exists (with retry for mobile timing issues)
+        let plan = null;
+        for (let i = 0; i < 3; i++) {
+          plan = await getPlanById(planId);
+          if (plan) break;
+          if (i < 2) {
+            console.log(`[LiveSharePanel] Plan not found yet, retrying in 300ms (attempt ${i + 1}/3)`);
+            await new Promise(resolve => setTimeout(resolve, 300));
+          }
+        }
+        
+        if (!plan) {
+          throw new Error('Plan not found. Please refresh and try again.');
+        }
+        console.log('[LiveSharePanel] Plan verified:', planId);
+        
+        // Now create/fetch the tokens (with built-in retry logic)
         const t = await getOrCreateShareTokens(planId);
         if (cancelled) return;
         setTokens(t);
       } catch (e) {
         if (cancelled) return;
-        console.error('[LiveSharePanel] getOrCreateShareTokens error:', e);
-        const raw = e instanceof Error ? e.message : 'Failed to create share link.';
-        // Show the actual error message to help diagnose issues
-        setError(
-          raw.toLowerCase().includes('owner')
-            ? "Only the plan's owner can create share links. Ask whoever created this plan to send you the link."
-            : `Failed to create share link: ${raw}`
-        );
+        console.error('[LiveSharePanel] Share link creation failed:', e);
+        
+        // Extract error message, handling Supabase's error format
+        let message = 'Failed to create share link.';
+        if (e && typeof e === 'object') {
+          const err = e as any;
+          // Supabase errors can be in various formats
+          message = err.message || err.error_description || err.error || err.details || message;
+        } else if (typeof e === 'string') {
+          message = e;
+        } else if (e instanceof Error) {
+          message = e.message;
+        }
+        
+        // Provide helpful error messages
+        if (message.toLowerCase().includes('owner')) {
+          setError("Only the plan's owner can create share links. Ask whoever created this plan to send you the link.");
+        } else if (message.toLowerCase().includes('signed in')) {
+          setError('You must be signed in to create share links. Please refresh and try again.');
+        } else {
+          setError(`Failed to create share link: ${message}`);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }

@@ -71,16 +71,49 @@ export interface ShareTokens {
 }
 
 export async function getOrCreateShareTokens(planId: string): Promise<ShareTokens> {
-  const { data, error } = await supabase.rpc('get_or_create_share_tokens', {
-    plan_id_input: planId,
-  });
+  console.log('[cloud] getOrCreateShareTokens called for planId:', planId);
+  
+  // Check current auth state for debugging
+  const { data: { user } } = await supabase.auth.getUser();
+  console.log('[cloud] current user:', user?.id, 'is_anonymous:', user?.is_anonymous);
+  
+  // Retry logic to handle potential timing issues on mobile
+  let lastError: any = null;
+  const maxRetries = 3;
+  const retryDelays = [0, 500, 1000]; // 0ms, 500ms, 1000ms
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    if (attempt > 0) {
+      console.log(`[cloud] Retry attempt ${attempt + 1}/${maxRetries} after ${retryDelays[attempt]}ms`);
+      await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]));
+    }
+    
+    const { data, error } = await supabase.rpc('get_or_create_share_tokens', {
+      plan_id_input: planId,
+    });
 
-  if (error) {
-    console.error('[cloud] getOrCreateShareTokens failed:', error);
-    throw error;
+    if (!error) {
+      console.log('[cloud] getOrCreateShareTokens success:', data);
+      return data as ShareTokens;
+    }
+    
+    lastError = error;
+    console.error(`[cloud] getOrCreateShareTokens attempt ${attempt + 1} failed:`, error);
+    
+    // Don't retry if it's a definitive auth/permission error
+    const errorMessage = error?.message || '';
+    if (errorMessage.includes('must be signed in') || 
+        errorMessage.includes('only the plan owner')) {
+      console.log('[cloud] Auth/permission error detected, not retrying');
+      break;
+    }
   }
-
-  return data as ShareTokens;
+  
+  // All retries failed
+  console.error('[cloud] getOrCreateShareTokens failed after all retries');
+  console.error('[cloud] error details:', JSON.stringify(lastError, null, 2));
+  console.error('[cloud] planId:', planId, 'user:', user?.id);
+  throw lastError;
 }
 
 export interface JoinResult {
