@@ -100,19 +100,22 @@ export function useHivePlan() {
     let cancelled = false;
 
     async function bootstrap() {
-      // Check if view-only mode was preserved from a previous load
-      const wasViewOnly = sessionStorage.getItem('hivewar-view-only') === 'true';
-      if (wasViewOnly) {
-        setIsViewOnly(true);
-        setJoinedViaShareLink(true);
-      }
-
       // Live-share / view token in URL: join the plan as a collaborator,
       // then it shows up in the regular cloud plan list via RLS.
       const params = new URLSearchParams(window.location.search);
       const collabToken = params.get('share') || params.get('view');
       const isViewOnlyLink = !!params.get('view');
       let joinedPlanId: string | null = null;
+      
+      // Check if view-only mode was preserved from a previous load
+      // BUT only honor it if we have a collabToken in the URL, or if we're loading from a legacy URL plan.
+      // Otherwise, clear the stale flag so normal users can create share links.
+      const wasViewOnly = sessionStorage.getItem('hivewar-view-only') === 'true';
+      if (wasViewOnly && !collabToken) {
+        // Stale view-only flag without a current share link - clear it
+        sessionStorage.removeItem('hivewar-view-only');
+      }
+      
       if (collabToken) {
         try {
           // Timeout guard: if joinPlanByToken hangs, fail fast so the user
@@ -161,15 +164,14 @@ export function useHivePlan() {
       }
 
       // If user joined via share/view link but plan fetch failed, don't create empty plan
-      if (wasViewOnly || joinedPlanId) {
+      // Only check joinedPlanId here (not wasViewOnly, which we may have just cleared if stale)
+      if (joinedPlanId) {
         // They came from a share link - use cached data if available, otherwise show loading
         // but don't create a new "My First Hive" plan
         const cachedPlans = loadPlansFromStorage();
         if (cachedPlans.length > 0) {
           setPlans(cachedPlans);
-          const current = joinedPlanId 
-            ? cachedPlans.find(p => p.id === joinedPlanId)
-            : cachedPlans[0];
+          const current = cachedPlans.find(p => p.id === joinedPlanId);
           if (current) {
             setCurrentPlan(current);
             saveCurrentPlanId(current.id);
