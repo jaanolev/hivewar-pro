@@ -133,6 +133,15 @@ export default function App() {
     b => b.id === editorState.selectedBuildingId
   );
 
+  // Handle selecting building type — on mobile (≤768px), close palette
+  // after selection so the grid is visible for placement
+  const handleSelectBuildingType = useCallback((typeId: string | null) => {
+    selectBuildingType(typeId);
+    if (typeId && window.innerWidth <= 768) {
+      setPaletteOpen(false);
+    }
+  }, [selectBuildingType]);
+
   // Handle placing building on grid
   const handlePlaceBuilding = useCallback((gridX: number, gridY: number) => {
     if (editorState.selectedBuildingTypeId) {
@@ -332,7 +341,7 @@ export default function App() {
       {!isViewOnly && (
         <BuildingPalette
           selectedTypeId={editorState.selectedBuildingTypeId}
-          onSelectType={selectBuildingType}
+          onSelectType={handleSelectBuildingType}
           isOpen={paletteOpen}
           onToggle={() => setPaletteOpen(!paletteOpen)}
         />
