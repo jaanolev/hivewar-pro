@@ -8,6 +8,7 @@ import {
   saveCurrentPlanId,
   loadCurrentPlanId,
   loadPlanFromUrl,
+  sanitizeShareToken,
 } from '../utils/storage';
 import {
   listPlans,
@@ -105,7 +106,9 @@ export function useHivePlan() {
       // Live-share / view token in URL: join the plan as a collaborator,
       // then it shows up in the regular cloud plan list via RLS.
       const params = new URLSearchParams(window.location.search);
-      const collabToken = params.get('share') || params.get('view');
+      const rawToken = params.get('share') || params.get('view');
+      // Sanitize the token to handle Discord backticks, trailing punctuation, etc.
+      const collabToken = sanitizeShareToken(rawToken);
       const isViewOnlyLink = !!params.get('view');
       let joinedPlanId: string | null = null;
       

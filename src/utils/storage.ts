@@ -227,3 +227,51 @@ export function canEarnMoreBonusExports(): boolean {
   return getBonusExports() < MAX_BONUS_EXPORTS;
 }
 
+/**
+ * Sanitize a share/view token from URL parameters.
+ * Handles common issues like Discord backticks, trailing punctuation, and whitespace.
+ * 
+ * Tokens are 32 hex characters (UUID without dashes), so we:
+ * 1. Decode URI components
+ * 2. Strip leading/trailing whitespace
+ * 3. Strip trailing punctuation that users add when pasting
+ * 4. Extract only the hex token body
+ * 
+ * @param rawToken - The raw token string from URL parameters
+ * @returns Sanitized token, or null if no valid token found
+ */
+export function sanitizeShareToken(rawToken: string | null): string | null {
+  if (!rawToken) return null;
+  
+  try {
+    let token = rawToken;
+    
+    // Decode URI component (e.g., %60 -> `)
+    try {
+      token = decodeURIComponent(token);
+    } catch {
+      // If decoding fails, use the original string
+    }
+    
+    // Strip leading and trailing whitespace
+    token = token.trim();
+    
+    // Strip trailing punctuation commonly added when pasting URLs
+    // (backtick, quotes, period, comma, closing brackets, angle bracket, and %60)
+    token = token.replace(/[`'",.\)\]\}>]+((%60)+)?$/g, '');
+    
+    // Extract the hex token: look for 32 consecutive hex characters
+    // This handles cases where the token is embedded in other text
+    const hexMatch = token.match(/([a-f0-9]{32})/i);
+    if (hexMatch) {
+      return hexMatch[1].toLowerCase();
+    }
+    
+    // If no 32-char hex string found, return null (invalid token)
+    return null;
+  } catch (e) {
+    console.error('[token] sanitization failed:', e);
+    return null;
+  }
+}
+
