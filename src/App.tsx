@@ -147,8 +147,14 @@ export default function App() {
     if (editorState.selectedBuildingTypeId) {
       addBuilding(editorState.selectedBuildingTypeId, gridX, gridY, 1);
       trackEvent(Events.BUILDING_PLACED, { buildingType: editorState.selectedBuildingTypeId });
+      // On mobile (≤768px), clear building selection after placement so the
+      // property panel doesn't auto-open and cover the grid. User can tap the
+      // placed building later if they want to edit it.
+      if (window.innerWidth <= 768) {
+        selectBuilding(null);
+      }
     }
-  }, [editorState.selectedBuildingTypeId, addBuilding]);
+  }, [editorState.selectedBuildingTypeId, addBuilding, selectBuilding]);
 
   // Handle moving building
   const handleMoveBuilding = useCallback((buildingId: string, gridX: number, gridY: number) => {
