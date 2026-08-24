@@ -368,6 +368,29 @@
     border: 1px solid rgba(16, 185, 129, 0.3);
     padding: 10px;
   }
+
+  /* Corner chip when building is selected and palette is closed */
+  .building-palette.has-selection .palette-toggle {
+    width: 44px;
+    height: 44px;
+    position: fixed;
+    bottom: 12px;
+    left: 12px;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .building-palette.has-selection .palette-toggle::before {
+    display: none;
+  }
+
+  .building-palette.has-selection .toggle-text {
+    display: none;
+  }
+
+  .building-palette.has-selection .toggle-icon {
+    font-size: 22px;
+  }
 }
 
 /* Extra small screens */
@@ -408,6 +431,14 @@
 
   .building-name {
     font-size: 8px;
+  }
+
+  /* Corner chip sizing for extra small screens */
+  .building-palette.has-selection .palette-toggle {
+    width: 40px;
+    height: 40px;
+    bottom: 10px;
+    left: 10px;
   }
 }
 

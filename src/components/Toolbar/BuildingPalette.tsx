@@ -21,7 +21,7 @@ export default function BuildingPalette({
   const filteredBuildings = BUILDING_TYPES.filter(b => b.category === activeCategory);
 
   return (
-    <div className={`building-palette ${isOpen ? 'open' : ''}`}>
+    <div className={`building-palette ${isOpen ? 'open' : ''} ${!isOpen && selectedTypeId ? 'has-selection' : ''}`}>
       <button className="palette-toggle" onClick={onToggle}>
         <span className="toggle-icon">{isOpen ? '▼' : '🏗️'}</span>
         <span className="toggle-text">{isOpen ? 'Close' : 'Buildings'}</span>
