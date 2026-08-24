@@ -75,6 +75,8 @@ export function useHivePlan() {
   
   // Guard to prevent bootstrap from creating multiple plans if effect runs multiple times
   const bootstrappedRef = useRef(false);
+  // In-flight flag to prevent overlapping bootstrap calls from creating duplicate plans
+  const bootstrapInFlightRef = useRef(false);
 
   // Live editing lock for the currently-viewed plan. Null when the plan
   // is unshared (only one user) or when the lock state is still loading.
@@ -103,14 +105,22 @@ export function useHivePlan() {
     let cancelled = false;
 
     async function bootstrap() {
-      // Live-share / view token in URL: join the plan as a collaborator,
-      // then it shows up in the regular cloud plan list via RLS.
-      const params = new URLSearchParams(window.location.search);
-      const rawToken = params.get('share') || params.get('view');
-      // Sanitize the token to handle Discord backticks, trailing punctuation, etc.
-      const collabToken = sanitizeShareToken(rawToken);
-      const isViewOnlyLink = !!params.get('view');
-      let joinedPlanId: string | null = null;
+      try {
+        // Guard against overlapping bootstrap calls from creating duplicate first-run plans
+        if (bootstrapInFlightRef.current) {
+          console.warn('[plan] Bootstrap already in flight, skipping duplicate call');
+          return;
+        }
+        bootstrapInFlightRef.current = true;
+        
+        // Live-share / view token in URL: join the plan as a collaborator,
+        // then it shows up in the regular cloud plan list via RLS.
+        const params = new URLSearchParams(window.location.search);
+        const rawToken = params.get('share') || params.get('view');
+        // Sanitize the token to handle Discord backticks, trailing punctuation, etc.
+        const collabToken = sanitizeShareToken(rawToken);
+        const isViewOnlyLink = !!params.get('view');
+        let joinedPlanId: string | null = null;
       
       // Check if view-only mode was preserved from a previous load
       // BUT only honor it if we have a collabToken in the URL, or if we're loading from a legacy URL plan.
@@ -323,21 +333,26 @@ export function useHivePlan() {
         setCurrentPlan(newPlan);
         saveCurrentPlanId(newPlan.id);
       }
+      } finally {
+        // Always clear in-flight flag when bootstrap completes or is cancelled
+        bootstrapInFlightRef.current = false;
+      }
     }
 
     bootstrap().catch((e) => {
       console.error('[plan] bootstrap failed:', e);
-      if (!bootstrappedRef.current) {
-        setBootstrapError(
-          'Failed to load your plans. Please check your connection and try again.'
-        );
-      }
+      // Always show error to user so they can retry, even if bootstrap was cancelled
+      setBootstrapError(
+        'Failed to load your plans. Please check your connection and try again.'
+      );
     });
 
     return () => {
       cancelled = true;
+      // Reset bootstrapped flag on cleanup so remounts can bootstrap again
+      bootstrappedRef.current = false;
     };
-  }, [authLoading, user]);
+  }, [authLoading, user?.id]);
 
   // Apply a remote plan update (from the realtime channel) without
   // triggering our own cloud save. Idempotent: ignores stale updates.
