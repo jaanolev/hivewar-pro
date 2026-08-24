@@ -16,6 +16,7 @@ export default function LiveSharePanel({ planId, autoCopyView = false }: Props) 
   const [tokens, setTokens] = useState<ShareTokens | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [planName, setPlanName] = useState<string>('Diamond Defense');
 
   useEffect(() => {
     let cancelled = false;
@@ -45,6 +46,9 @@ export default function LiveSharePanel({ planId, autoCopyView = false }: Props) 
           throw new Error('Plan not found. Please refresh and try again.');
         }
         console.log('[LiveSharePanel] Plan verified:', planId);
+        
+        // Store plan name for clipboard formatting
+        setPlanName(plan.name);
         
         // Now create/fetch the tokens (with built-in retry logic)
         const t = await getOrCreateShareTokens(planId);
@@ -91,10 +95,11 @@ export default function LiveSharePanel({ planId, autoCopyView = false }: Props) 
   useEffect(() => {
     if (!autoCopyView || !tokens) return;
     const url = `${baseUrl}?view=${tokens.view_token}`;
-    copyToClipboard(url).then((ok) => {
+    const clipboardText = `${planName} — view only (paste in Discord)\n${url}`;
+    copyToClipboard(clipboardText).then((ok) => {
       if (ok) trackEvent(Events.COLLAB_LINK_COPIED, { type: 'view', source: 'first_run' });
     });
-  }, [autoCopyView, tokens, baseUrl]);
+  }, [autoCopyView, tokens, baseUrl, planName]);
 
   return (
     <div className="share-panel">
@@ -122,6 +127,7 @@ export default function LiveSharePanel({ planId, autoCopyView = false }: Props) 
             url={viewUrl}
             variant="view"
             startCopied={autoCopyView}
+            planName={planName}
           />
         </>
       )}
@@ -135,17 +141,23 @@ function ShareLinkRow({
   url,
   variant,
   startCopied = false,
+  planName,
 }: {
   label: string;
   hint: string;
   url: string;
   variant: 'edit' | 'view';
   startCopied?: boolean;
+  planName?: string;
 }) {
   const [copied, setCopied] = useState(startCopied);
 
   async function copy() {
-    const ok = await copyToClipboard(url);
+    // For view-only links, use Discord-friendly format with plan name
+    const clipboardText = variant === 'view' && planName
+      ? `${planName} — view only (paste in Discord)\n${url}`
+      : url;
+    const ok = await copyToClipboard(clipboardText);
     if (ok) {
       setCopied(true);
       playConfirmSound(); // Classy click on successful copy

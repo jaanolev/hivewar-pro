@@ -406,10 +406,11 @@ export default function App() {
               const tokens = await getOrCreateShareTokens(currentPlan.id);
               const baseUrl = window.location.origin + window.location.pathname;
               const viewUrl = `${baseUrl}?view=${tokens.view_token}`;
-              const ok = await copyToClipboard(viewUrl);
+              const clipboardText = `${currentPlan.name} — view only (paste in Discord)\n${viewUrl}`;
+              const ok = await copyToClipboard(clipboardText);
               if (ok) {
                 trackEvent(Events.COLLAB_LINK_COPIED, { type: 'view', source: 'first_run' });
-                showToast('✓ Link copied! Paste it in Discord so your alliance can see their spots.');
+                showToast('Copied. Paste it in Discord.');
               } else {
                 showToast('Link ready — tap Share to copy it');
               }
