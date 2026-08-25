@@ -24,6 +24,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { trackEvent, Events } from '../utils/analytics';
+import { HIVE_TEMPLATES } from '../data/templates';
 
 const MIGRATED_KEY = 'hivewar-migrated-to-cloud';
 const SAVE_DEBOUNCE_MS = 500;
@@ -55,14 +56,15 @@ export function useHivePlan() {
   const { user, loading: authLoading } = useAuth();
 
   const [plans, setPlans] = useState<HivePlan[]>([]);
-  // Eager seed: immediately load from cache or template so visitors see the hive
-  // before auth completes. Bootstrap will sync this to cloud when ready.
+  // Eager seed: immediately load from cache or create from Diamond Defense template
+  // SYNCHRONOUSLY so visitors see the hive before auth completes. Bootstrap will
+  // sync this to cloud when ready. ZERO awaits before SEED_PLAN_KEY is written.
   const [currentPlan, setCurrentPlan] = useState<HivePlan | null>(() => {
-    // Synchronous seed attempt from cache only (template requires async import)
     const params = new URLSearchParams(window.location.search);
     const hasShareToken = !!(params.get('share') || params.get('view'));
     if (hasShareToken) return null; // Let bootstrap handle share links
     
+    // Try cache first
     const cached = loadPlansFromStorage();
     if (cached.length > 0) {
       const mostRecent = cached.reduce((latest, p) => 
@@ -72,7 +74,23 @@ export function useHivePlan() {
       sessionStorage.setItem(SEED_PLAN_KEY, mostRecent.id);
       return mostRecent;
     }
-    return null; // Will be seeded async below if needed
+    
+    // No cache - seed from Diamond Defense template SYNCHRONOUSLY (no await!)
+    const newPlan = createEmptyPlan('My First Hive');
+    const diamondTemplate = HIVE_TEMPLATES.find(t => t.id === 'diamond-defense');
+    if (diamondTemplate) {
+      newPlan.buildings = diamondTemplate.buildings.map(b => ({
+        ...b,
+        id: generateId()
+      }));
+    }
+    
+    // Write to storage and mark as seed BEFORE any async can interfere
+    savePlansToStorage([newPlan]);
+    saveCurrentPlanId(newPlan.id);
+    sessionStorage.setItem(SEED_PLAN_KEY, newPlan.id);
+    
+    return newPlan;
   });
   const [editorState, setEditorState] = useState<EditorState>({
     selectedBuildingId: null,
@@ -106,37 +124,11 @@ export function useHivePlan() {
   const lockStateRef = useRef(lockState);
   lockStateRef.current = lockState;
 
-  // Async seed effect: if we didn't get a plan from cache (sync initializer),
-  // create one from the Diamond Defense template immediately so first-time
-  // visitors see the hive before auth completes.
+  // Sync plans state with currentPlan on mount if seeded
   useEffect(() => {
-    if (currentPlan) return; // Already seeded from cache
-    
-    const params = new URLSearchParams(window.location.search);
-    const hasShareToken = !!(params.get('share') || params.get('view'));
-    if (hasShareToken) return; // Let bootstrap handle share links
-    
-    let cancelled = false;
-    
-    async function seedFromTemplate() {
-      const newPlan = createEmptyPlan('My First Hive');
-      const templates = await import('../data/templates');
-      const diamondTemplate = templates.HIVE_TEMPLATES.find(t => t.id === 'diamond-defense');
-      if (diamondTemplate && !cancelled) {
-        newPlan.buildings = diamondTemplate.buildings.map(b => ({
-          ...b,
-          id: generateId()
-        }));
-        setCurrentPlan(newPlan);
-        setPlans([newPlan]);
-        savePlansToStorage([newPlan]);
-        saveCurrentPlanId(newPlan.id);
-        sessionStorage.setItem(SEED_PLAN_KEY, newPlan.id);
-      }
+    if (currentPlan && plans.length === 0) {
+      setPlans([currentPlan]);
     }
-    
-    seedFromTemplate();
-    return () => { cancelled = true; };
   }, []);
 
   // Number of OTHER users currently subscribed to the plan's realtime
@@ -360,40 +352,49 @@ export function useHivePlan() {
       } else {
         // No plans exist in cloud - check if we seeded a plan during initial render
         const seedPlanId = sessionStorage.getItem(SEED_PLAN_KEY);
-        let planToSync: HivePlan | null = null;
         
-        if (seedPlanId) {
-          // We seeded a plan - find it in current state or localStorage
-          const seededFromState = currentPlan?.id === seedPlanId ? currentPlan : null;
-          const cachedPlans = loadPlansFromStorage();
-          const seededFromCache = cachedPlans.find(p => p.id === seedPlanId);
-          planToSync = seededFromState || seededFromCache || null;
-          
-          if (planToSync) {
-            console.log('[plan] Upserting seeded plan to cloud:', planToSync.id);
-          }
-        }
-        
-        // If no seed found (should be rare), create a new plan
-        if (!planToSync) {
-          planToSync = createEmptyPlan('My First Hive');
-          const diamondTemplate = (await import('../data/templates')).HIVE_TEMPLATES.find(t => t.id === 'diamond-defense');
+        // CRITICAL: Check seed marker FIRST to prevent duplicate-plan race.
+        // If a seed exists, we MUST use it - never create a new plan.
+        if (!seedPlanId) {
+          console.error('[plan] Bootstrap reached empty-cloud with no seed! This should never happen.');
+          // Emergency fallback - create a plan, but this path indicates a bug
+          const fallbackPlan = createEmptyPlan('My First Hive');
+          const diamondTemplate = HIVE_TEMPLATES.find(t => t.id === 'diamond-defense');
           if (diamondTemplate) {
-            planToSync.buildings = diamondTemplate.buildings.map(b => ({
+            fallbackPlan.buildings = diamondTemplate.buildings.map(b => ({
               ...b,
               id: generateId()
             }));
           }
-          console.log('[plan] No seed found, creating first plan:', planToSync.id);
+          await upsertPlan(fallbackPlan, user!.id);
+          if (cancelled) return;
+          setPlans([fallbackPlan]);
+          savePlansToStorage([fallbackPlan]);
+          setCurrentPlan(fallbackPlan);
+          saveCurrentPlanId(fallbackPlan.id);
+          return;
         }
         
-        // Sync the plan to cloud
-        await upsertPlan(planToSync, user!.id);
-        console.log('[plan] First plan synced to cloud successfully');
+        // Seed exists - find it in localStorage (must be there since seed wrote it)
+        const cachedPlans = loadPlansFromStorage();
+        const seededPlan = cachedPlans.find(p => p.id === seedPlanId);
+        
+        if (!seededPlan) {
+          console.error('[plan] Seed marker exists but plan not in localStorage! Seed ID:', seedPlanId);
+          // This should be impossible - seed writes to localStorage before setting marker
+          sessionStorage.removeItem(SEED_PLAN_KEY);
+          return;
+        }
+        
+        console.log('[plan] Upserting seeded plan to cloud:', seededPlan.id);
+        
+        // Sync the seeded plan to cloud
+        await upsertPlan(seededPlan, user!.id);
+        console.log('[plan] Seeded plan synced to cloud successfully');
         
         // Verify the plan was saved
         try {
-          const verified = await getPlanById(planToSync.id);
+          const verified = await getPlanById(seededPlan.id);
           if (verified) {
             console.log('[plan] Verified plan exists in database:', verified.id);
           } else {
@@ -405,13 +406,11 @@ export function useHivePlan() {
         
         if (cancelled) return;
         
-        // Update state if needed (might already be set from seed)
-        setPlans([planToSync]);
-        savePlansToStorage([planToSync]);
-        if (currentPlan?.id !== planToSync.id) {
-          setCurrentPlan(planToSync);
-          saveCurrentPlanId(planToSync.id);
-        }
+        // Update state (may already be set from seed initializer)
+        setPlans([seededPlan]);
+        savePlansToStorage([seededPlan]);
+        setCurrentPlan(seededPlan);
+        saveCurrentPlanId(seededPlan.id);
         
         // Clear the seed marker now that bootstrap is complete
         sessionStorage.removeItem(SEED_PLAN_KEY);
