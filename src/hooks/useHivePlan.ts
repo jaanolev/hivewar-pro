@@ -30,6 +30,7 @@ const SAVE_DEBOUNCE_MS = 500;
 const HEARTBEAT_MS = 60_000;
 const LOCK_STALE_MS = 3 * 60_000;
 const BOOTSTRAP_TIMEOUT_MS = 8_000;
+const SEED_PLAN_KEY = 'hivewar-seed-plan-id';
 
 // Wrap async operations with timeout to prevent silent hangs
 function withTimeout<T>(
@@ -54,7 +55,25 @@ export function useHivePlan() {
   const { user, loading: authLoading } = useAuth();
 
   const [plans, setPlans] = useState<HivePlan[]>([]);
-  const [currentPlan, setCurrentPlan] = useState<HivePlan | null>(null);
+  // Eager seed: immediately load from cache or template so visitors see the hive
+  // before auth completes. Bootstrap will sync this to cloud when ready.
+  const [currentPlan, setCurrentPlan] = useState<HivePlan | null>(() => {
+    // Synchronous seed attempt from cache only (template requires async import)
+    const params = new URLSearchParams(window.location.search);
+    const hasShareToken = !!(params.get('share') || params.get('view'));
+    if (hasShareToken) return null; // Let bootstrap handle share links
+    
+    const cached = loadPlansFromStorage();
+    if (cached.length > 0) {
+      const mostRecent = cached.reduce((latest, p) => 
+        (!latest || p.updatedAt > latest.updatedAt) ? p : latest, 
+        cached[0]
+      );
+      sessionStorage.setItem(SEED_PLAN_KEY, mostRecent.id);
+      return mostRecent;
+    }
+    return null; // Will be seeded async below if needed
+  });
   const [editorState, setEditorState] = useState<EditorState>({
     selectedBuildingId: null,
     selectedBuildingTypeId: null,
@@ -86,6 +105,39 @@ export function useHivePlan() {
   });
   const lockStateRef = useRef(lockState);
   lockStateRef.current = lockState;
+
+  // Async seed effect: if we didn't get a plan from cache (sync initializer),
+  // create one from the Diamond Defense template immediately so first-time
+  // visitors see the hive before auth completes.
+  useEffect(() => {
+    if (currentPlan) return; // Already seeded from cache
+    
+    const params = new URLSearchParams(window.location.search);
+    const hasShareToken = !!(params.get('share') || params.get('view'));
+    if (hasShareToken) return; // Let bootstrap handle share links
+    
+    let cancelled = false;
+    
+    async function seedFromTemplate() {
+      const newPlan = createEmptyPlan('My First Hive');
+      const templates = await import('../data/templates');
+      const diamondTemplate = templates.HIVE_TEMPLATES.find(t => t.id === 'diamond-defense');
+      if (diamondTemplate && !cancelled) {
+        newPlan.buildings = diamondTemplate.buildings.map(b => ({
+          ...b,
+          id: generateId()
+        }));
+        setCurrentPlan(newPlan);
+        setPlans([newPlan]);
+        savePlansToStorage([newPlan]);
+        saveCurrentPlanId(newPlan.id);
+        sessionStorage.setItem(SEED_PLAN_KEY, newPlan.id);
+      }
+    }
+    
+    seedFromTemplate();
+    return () => { cancelled = true; };
+  }, []);
 
   // Number of OTHER users currently subscribed to the plan's realtime
   // channel (peer count via Supabase Realtime Presence).
@@ -279,6 +331,8 @@ export function useHivePlan() {
         if (joined) {
           setCurrentPlan(joined);
           saveCurrentPlanId(joined.id);
+          // Clear seed marker - we joined via share link
+          sessionStorage.removeItem(SEED_PLAN_KEY);
           return;
         }
         // If joined plan not found after retries, show error instead of hanging
@@ -294,30 +348,52 @@ export function useHivePlan() {
 
       if (found) {
         setCurrentPlan(found);
+        // Clear seed marker - we found the plan in cloud
+        sessionStorage.removeItem(SEED_PLAN_KEY);
       } else if (cloudPlans.length > 0) {
         // Current plan not in list, but other plans exist - prefer non-empty plan
         const firstNonEmpty = cloudPlans.find((p: HivePlan) => p.buildings.length > 0) || cloudPlans[0];
         setCurrentPlan(firstNonEmpty);
         saveCurrentPlanId(firstNonEmpty.id);
+        // Clear seed marker - we have cloud plans
+        sessionStorage.removeItem(SEED_PLAN_KEY);
       } else {
-        // No plans exist in cloud or cache - create first plan with Diamond Defense template
-        // to avoid creating empty plan that later gets templated (which causes race condition duplicates)
-        const newPlan = createEmptyPlan('My First Hive');
-        // Apply Diamond Defense template directly during bootstrap
-        const diamondTemplate = (await import('../data/templates')).HIVE_TEMPLATES.find(t => t.id === 'diamond-defense');
-        if (diamondTemplate) {
-          newPlan.buildings = diamondTemplate.buildings.map(b => ({
-            ...b,
-            id: generateId()
-          }));
-        }
-        console.log('[plan] Creating first plan:', newPlan.id, 'for user:', user!.id);
-        await upsertPlan(newPlan, user!.id);
-        console.log('[plan] First plan created and saved successfully');
+        // No plans exist in cloud - check if we seeded a plan during initial render
+        const seedPlanId = sessionStorage.getItem(SEED_PLAN_KEY);
+        let planToSync: HivePlan | null = null;
         
-        // Verify the plan was saved by fetching it back
+        if (seedPlanId) {
+          // We seeded a plan - find it in current state or localStorage
+          const seededFromState = currentPlan?.id === seedPlanId ? currentPlan : null;
+          const cachedPlans = loadPlansFromStorage();
+          const seededFromCache = cachedPlans.find(p => p.id === seedPlanId);
+          planToSync = seededFromState || seededFromCache || null;
+          
+          if (planToSync) {
+            console.log('[plan] Upserting seeded plan to cloud:', planToSync.id);
+          }
+        }
+        
+        // If no seed found (should be rare), create a new plan
+        if (!planToSync) {
+          planToSync = createEmptyPlan('My First Hive');
+          const diamondTemplate = (await import('../data/templates')).HIVE_TEMPLATES.find(t => t.id === 'diamond-defense');
+          if (diamondTemplate) {
+            planToSync.buildings = diamondTemplate.buildings.map(b => ({
+              ...b,
+              id: generateId()
+            }));
+          }
+          console.log('[plan] No seed found, creating first plan:', planToSync.id);
+        }
+        
+        // Sync the plan to cloud
+        await upsertPlan(planToSync, user!.id);
+        console.log('[plan] First plan synced to cloud successfully');
+        
+        // Verify the plan was saved
         try {
-          const verified = await getPlanById(newPlan.id);
+          const verified = await getPlanById(planToSync.id);
           if (verified) {
             console.log('[plan] Verified plan exists in database:', verified.id);
           } else {
@@ -328,10 +404,17 @@ export function useHivePlan() {
         }
         
         if (cancelled) return;
-        setPlans([newPlan]);
-        savePlansToStorage([newPlan]);
-        setCurrentPlan(newPlan);
-        saveCurrentPlanId(newPlan.id);
+        
+        // Update state if needed (might already be set from seed)
+        setPlans([planToSync]);
+        savePlansToStorage([planToSync]);
+        if (currentPlan?.id !== planToSync.id) {
+          setCurrentPlan(planToSync);
+          saveCurrentPlanId(planToSync.id);
+        }
+        
+        // Clear the seed marker now that bootstrap is complete
+        sessionStorage.removeItem(SEED_PLAN_KEY);
       }
       } finally {
         // Always clear in-flight flag when bootstrap completes or is cancelled
