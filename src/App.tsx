@@ -467,6 +467,9 @@ export default function App() {
                 setPasteReminderClipboard(clipboardText);
               } else {
                 showToast('Link ready — tap Share to copy it');
+                // Show persistent reminder even when copy fails - they need the URL on screen
+                setPasteReminderUrl(viewUrl);
+                setPasteReminderClipboard(clipboardText);
               }
             } catch (e) {
               console.error('[first-run] share link generation failed:', e);
