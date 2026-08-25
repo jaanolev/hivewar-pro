@@ -109,6 +109,8 @@ export function useHivePlan() {
   const [isViewOnly, setIsViewOnly] = useState(false);
   // Track bootstrap errors for user feedback
   const [bootstrapError, setBootstrapError] = useState<string | null>(null);
+  // Track when bootstrap has completed successfully (for hive-first token mint)
+  const [bootstrapComplete, setBootstrapComplete] = useState(false);
   
   // Guard to prevent bootstrap from creating multiple plans if effect runs multiple times
   const bootstrappedRef = useRef(false);
@@ -264,16 +266,25 @@ export function useHivePlan() {
         return;
       }
 
-      // Timeout guard: if listPlans hangs, check localStorage cache first
-      // before falling back to empty. This prevents wiping an existing plan
-      // when the network is slow but we already have data.
+      // Timeout guard: if listPlans hangs, bail early without changing state.
+      // Keep what is already on screen, don't upsert, don't discard seed, don't setPlans([]).
+      // Leave bootstrapComplete false so hive-first mint doesn't fire against an unsynced seed.
       let cloudPlans = await withTimeout(listPlans(), BOOTSTRAP_TIMEOUT_MS, null as any);
       if (cancelled) return;
       
-      // If listPlans timed out, try loading from localStorage cache as fallback
-      if (cloudPlans === null) {
-        console.warn('[plan] listPlans timed out, using localStorage cache');
-        cloudPlans = loadPlansFromStorage();
+      const cloudTimedOut = cloudPlans === null;
+      if (cloudTimedOut) {
+        console.warn('[plan] listPlans timed out, keeping on-screen state without sync');
+        // Don't change state, don't set bootstrapComplete. The hive stays visible; mint waits.
+        return;
+      }
+
+      // Read and preserve the seed from localStorage BEFORE any writes that might destroy it.
+      const seedPlanId = sessionStorage.getItem(SEED_PLAN_KEY);
+      let seededPlan: HivePlan | null = null;
+      if (seedPlanId) {
+        const cachedPlans = loadPlansFromStorage();
+        seededPlan = cachedPlans.find(p => p.id === seedPlanId) || null;
       }
 
       // First-time migration: if cloud is empty and we have localStorage
@@ -289,8 +300,23 @@ export function useHivePlan() {
         localStorage.setItem(MIGRATED_KEY, 'true');
       }
 
+      // If cloud has plans and they are NOT the seed itself, discard the local seed.
+      // (If cloud only contains the seed we upserted earlier, keep the seed marker for now.)
+      if (seedPlanId && cloudPlans.length > 0) {
+        const cloudHasNonSeedPlans = cloudPlans.some((p: HivePlan) => p.id !== seedPlanId);
+        if (cloudHasNonSeedPlans) {
+          // Cloud already has real plans (user is returning, not first-run).
+          // Discard the seed - don't upsert it, don't merge it.
+          console.log('[plan] Cloud has plans, discarding local seed:', seedPlanId);
+          sessionStorage.removeItem(SEED_PLAN_KEY);
+          seededPlan = null;
+        }
+      }
+
       setPlans(cloudPlans);
-      // Mirror to localStorage as an offline cache
+      // Mirror to localStorage as an offline cache.
+      // Safe to overwrite now: if cloud has non-seed plans, we cleared seed above.
+      // If cloud is empty, we haven't written yet and will upsert seed below.
       savePlansToStorage(cloudPlans);
 
       // If we just joined a plan via share/view token, switch to it.
@@ -325,6 +351,8 @@ export function useHivePlan() {
           saveCurrentPlanId(joined.id);
           // Clear seed marker - we joined via share link
           sessionStorage.removeItem(SEED_PLAN_KEY);
+          // Mark bootstrap as complete
+          setBootstrapComplete(true);
           return;
         }
         // If joined plan not found after retries, show error instead of hanging
@@ -340,49 +368,22 @@ export function useHivePlan() {
 
       if (found) {
         setCurrentPlan(found);
-        // Clear seed marker - we found the plan in cloud
-        sessionStorage.removeItem(SEED_PLAN_KEY);
+        // Seed was already cleared above if cloud had non-seed plans
       } else if (cloudPlans.length > 0) {
         // Current plan not in list, but other plans exist - prefer non-empty plan
         const firstNonEmpty = cloudPlans.find((p: HivePlan) => p.buildings.length > 0) || cloudPlans[0];
         setCurrentPlan(firstNonEmpty);
         saveCurrentPlanId(firstNonEmpty.id);
-        // Clear seed marker - we have cloud plans
-        sessionStorage.removeItem(SEED_PLAN_KEY);
+        // Seed was already cleared above if cloud had non-seed plans
       } else {
-        // No plans exist in cloud - check if we seeded a plan during initial render
-        const seedPlanId = sessionStorage.getItem(SEED_PLAN_KEY);
-        
-        // CRITICAL: Check seed marker FIRST to prevent duplicate-plan race.
-        // If a seed exists, we MUST use it - never create a new plan.
-        if (!seedPlanId) {
-          console.error('[plan] Bootstrap reached empty-cloud with no seed! This should never happen.');
-          // Emergency fallback - create a plan, but this path indicates a bug
-          const fallbackPlan = createEmptyPlan('My First Hive');
-          const diamondTemplate = HIVE_TEMPLATES.find(t => t.id === 'diamond-defense');
-          if (diamondTemplate) {
-            fallbackPlan.buildings = diamondTemplate.buildings.map(b => ({
-              ...b,
-              id: generateId()
-            }));
-          }
-          await upsertPlan(fallbackPlan, user!.id);
-          if (cancelled) return;
-          setPlans([fallbackPlan]);
-          savePlansToStorage([fallbackPlan]);
-          setCurrentPlan(fallbackPlan);
-          saveCurrentPlanId(fallbackPlan.id);
-          return;
-        }
-        
-        // Seed exists - find it in localStorage (must be there since seed wrote it)
-        const cachedPlans = loadPlansFromStorage();
-        const seededPlan = cachedPlans.find(p => p.id === seedPlanId);
-        
-        if (!seededPlan) {
-          console.error('[plan] Seed marker exists but plan not in localStorage! Seed ID:', seedPlanId);
-          // This should be impossible - seed writes to localStorage before setting marker
-          sessionStorage.removeItem(SEED_PLAN_KEY);
+        // Cloud is empty (listPlans succeeded with []) - check if we preserved a seed
+        if (!seedPlanId || !seededPlan) {
+          // No seed exists - this should only happen if user landed on a share link,
+          // or if useState initializer was skipped (shouldn't be possible).
+          console.error('[plan] Bootstrap reached empty-cloud with no seed!');
+          setBootstrapError(
+            'Failed to initialize your hive. Please refresh the page.'
+          );
           return;
         }
         
@@ -415,6 +416,9 @@ export function useHivePlan() {
         // Clear the seed marker now that bootstrap is complete
         sessionStorage.removeItem(SEED_PLAN_KEY);
       }
+      
+      // Mark bootstrap as complete so hive-first token mint can proceed
+      setBootstrapComplete(true);
       } finally {
         // Always clear in-flight flag when bootstrap completes or is cancelled
         bootstrapInFlightRef.current = false;
@@ -942,6 +946,7 @@ export function useHivePlan() {
     // Error handling
     bootstrapError,
     retryBootstrap,
+    bootstrapComplete,
 
     // Live-collab state
     lockState,

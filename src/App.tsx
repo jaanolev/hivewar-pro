@@ -41,6 +41,7 @@ export default function App() {
     isViewOnly,
     bootstrapError,
     retryBootstrap,
+    bootstrapComplete,
     addBuilding,
     updateBuilding,
     deleteBuilding,
@@ -291,11 +292,13 @@ export default function App() {
   }, [currentPlan, onboarded, handleApplyTemplate]);
 
   // Hive-first onboarding: mint view-only token in background for brand-new
-  // users with Diamond Defense on the grid, show persistent strip immediately
+  // users with Diamond Defense on the grid, show persistent strip immediately.
+  // CRITICAL: Wait for bootstrap to complete so the plan is upserted to cloud first.
   useEffect(() => {
     if (onboarded || isViewOnly || joinedViaShareLink) return;
     if (!currentPlan || currentPlan.buildings.length < 5) return;
     if (pasteReminderUrl) return; // already minted
+    if (!bootstrapComplete) return; // wait for bootstrap to upsert seed to cloud
 
     const mintAndShowStrip = async () => {
       try {
@@ -312,7 +315,7 @@ export default function App() {
     };
 
     mintAndShowStrip();
-  }, [currentPlan, onboarded, isViewOnly, joinedViaShareLink, pasteReminderUrl]);
+  }, [currentPlan, onboarded, isViewOnly, joinedViaShareLink, pasteReminderUrl, bootstrapComplete]);
 
   // Pre-select HQ when on a blank grid, so mobile users can tap once to place
   // instead of opening drawer → picking HQ → tapping grid (three steps).
