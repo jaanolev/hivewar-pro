@@ -266,16 +266,25 @@ export function useHivePlan() {
         return;
       }
 
-      // Timeout guard: if listPlans hangs, fall back to empty array.
-      // Track whether we got real cloud data or timed out, so we don't
-      // misidentify a timeout (with localStorage fallback) as "cloud has plans".
+      // Timeout guard: if listPlans hangs, bail early without changing state.
+      // Keep what is already on screen, don't upsert, don't discard seed, don't setPlans([]).
+      // Leave bootstrapComplete false so hive-first mint doesn't fire against an unsynced seed.
       let cloudPlans = await withTimeout(listPlans(), BOOTSTRAP_TIMEOUT_MS, null as any);
       if (cancelled) return;
       
       const cloudTimedOut = cloudPlans === null;
       if (cloudTimedOut) {
-        console.warn('[plan] listPlans timed out, treating as empty cloud');
-        cloudPlans = [];
+        console.warn('[plan] listPlans timed out, keeping on-screen state without sync');
+        // Don't change state, don't set bootstrapComplete. The hive stays visible; mint waits.
+        return;
+      }
+
+      // Read and preserve the seed from localStorage BEFORE any writes that might destroy it.
+      const seedPlanId = sessionStorage.getItem(SEED_PLAN_KEY);
+      let seededPlan: HivePlan | null = null;
+      if (seedPlanId) {
+        const cachedPlans = loadPlansFromStorage();
+        seededPlan = cachedPlans.find(p => p.id === seedPlanId) || null;
       }
 
       // First-time migration: if cloud is empty and we have localStorage
@@ -291,20 +300,23 @@ export function useHivePlan() {
         localStorage.setItem(MIGRATED_KEY, 'true');
       }
 
-      // Before overwriting localStorage with cloud data, check if we have a seed
-      // that needs to be preserved or discarded.
-      const seedPlanId = sessionStorage.getItem(SEED_PLAN_KEY);
-      
+      // If cloud has plans and they are NOT the seed itself, discard the local seed.
+      // (If cloud only contains the seed we upserted earlier, keep the seed marker for now.)
       if (seedPlanId && cloudPlans.length > 0) {
-        // Cloud already has plans (user is returning, not first-run).
-        // Discard the seed - don't upsert it, don't merge it.
-        console.log('[plan] Cloud has plans, discarding local seed:', seedPlanId);
-        sessionStorage.removeItem(SEED_PLAN_KEY);
-        // Seed will be overwritten in localStorage by savePlansToStorage below
+        const cloudHasNonSeedPlans = cloudPlans.some((p: HivePlan) => p.id !== seedPlanId);
+        if (cloudHasNonSeedPlans) {
+          // Cloud already has real plans (user is returning, not first-run).
+          // Discard the seed - don't upsert it, don't merge it.
+          console.log('[plan] Cloud has plans, discarding local seed:', seedPlanId);
+          sessionStorage.removeItem(SEED_PLAN_KEY);
+          seededPlan = null;
+        }
       }
 
       setPlans(cloudPlans);
-      // Mirror to localStorage as an offline cache (may overwrite seed if cloud has plans)
+      // Mirror to localStorage as an offline cache.
+      // Safe to overwrite now: if cloud has non-seed plans, we cleared seed above.
+      // If cloud is empty, we haven't written yet and will upsert seed below.
       savePlansToStorage(cloudPlans);
 
       // If we just joined a plan via share/view token, switch to it.
@@ -356,36 +368,21 @@ export function useHivePlan() {
 
       if (found) {
         setCurrentPlan(found);
-        // Seed was already cleared above if cloud had plans
+        // Seed was already cleared above if cloud had non-seed plans
       } else if (cloudPlans.length > 0) {
         // Current plan not in list, but other plans exist - prefer non-empty plan
         const firstNonEmpty = cloudPlans.find((p: HivePlan) => p.buildings.length > 0) || cloudPlans[0];
         setCurrentPlan(firstNonEmpty);
         saveCurrentPlanId(firstNonEmpty.id);
-        // Seed was already cleared above if cloud had plans
+        // Seed was already cleared above if cloud had non-seed plans
       } else {
-        // Cloud is empty (or timed out) - check if we seeded a plan during initial render
-        const seedPlanId = sessionStorage.getItem(SEED_PLAN_KEY);
-        
-        if (!seedPlanId) {
+        // Cloud is empty (listPlans succeeded with []) - check if we preserved a seed
+        if (!seedPlanId || !seededPlan) {
           // No seed exists - this should only happen if user landed on a share link,
           // or if useState initializer was skipped (shouldn't be possible).
           console.error('[plan] Bootstrap reached empty-cloud with no seed!');
           setBootstrapError(
             'Failed to initialize your hive. Please refresh the page.'
-          );
-          return;
-        }
-        
-        // Seed exists - find it in localStorage (must be there since seed wrote it)
-        const cachedPlans = loadPlansFromStorage();
-        const seededPlan = cachedPlans.find(p => p.id === seedPlanId);
-        
-        if (!seededPlan) {
-          console.error('[plan] Seed marker exists but plan not in localStorage! Seed ID:', seedPlanId);
-          sessionStorage.removeItem(SEED_PLAN_KEY);
-          setBootstrapError(
-            'Failed to load your hive. Please refresh the page.'
           );
           return;
         }
