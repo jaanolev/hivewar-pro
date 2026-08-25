@@ -287,15 +287,34 @@ export function useHivePlan() {
         seededPlan = cachedPlans.find(p => p.id === seedPlanId) || null;
       }
 
+      // If listPlans returned empty but we have a seed, retry once to handle auth/RLS race.
+      // A returning user with existing plans may briefly see [] due to RLS policy lag.
+      if (cloudPlans.length === 0 && seedPlanId && !joinedPlanId) {
+        console.log('[plan] Cloud empty but seed exists - retrying listPlans to catch auth race');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        if (cancelled) return;
+        cloudPlans = await withTimeout(listPlans(), BOOTSTRAP_TIMEOUT_MS, null as any);
+        if (cancelled) return;
+        if (cloudPlans === null) {
+          // Second timeout - bail early without changing state
+          console.warn('[plan] listPlans retry timed out, keeping on-screen state');
+          return;
+        }
+        console.log('[plan] Retry complete, cloud has', cloudPlans.length, 'plans');
+      }
+
       // First-time migration: if cloud is empty and we have localStorage
-      // plans from the pre-cloud era, push them up.
+      // plans from the pre-cloud era (NOT including the seed), push them up.
       const alreadyMigrated = localStorage.getItem(MIGRATED_KEY) === 'true';
       if (cloudPlans.length === 0 && !alreadyMigrated && !joinedPlanId) {
         const localPlans = loadPlansFromStorage();
-        if (localPlans.length > 0) {
-          await Promise.all(localPlans.map((p) => upsertPlan(p, user!.id)));
+        // Filter out the seed plan - migration is ONLY for pre-cloud legacy plans
+        const legacyPlans = localPlans.filter(p => p.id !== seedPlanId);
+        if (legacyPlans.length > 0) {
+          console.log('[plan] Migrating', legacyPlans.length, 'pre-cloud plans (excluding seed)');
+          await Promise.all(legacyPlans.map((p) => upsertPlan(p, user!.id)));
           if (cancelled) return;
-          cloudPlans = localPlans;
+          cloudPlans = legacyPlans;
         }
         localStorage.setItem(MIGRATED_KEY, 'true');
       }
@@ -475,8 +494,12 @@ export function useHivePlan() {
   // Realtime subscription + edit-lock lifecycle, scoped to the current
   // plan. Acquires the lock on plan-open, heartbeats while held, listens
   // for other clients' updates, and releases on unmount / plan switch.
+  // IMPORTANT: Only acquire lock after bootstrap completes to avoid P0001 errors on unsynced seeds.
   useEffect(() => {
     if (!currentPlan?.id || !user?.id) return;
+    // Don't acquire lock until bootstrap completes (plan is synced to cloud)
+    if (!bootstrapComplete) return;
+    
     const planId = currentPlan.id;
     const userId = user.id;
 
@@ -556,7 +579,7 @@ export function useHivePlan() {
       setLockState({ editorUserId: null, acquiredAt: null });
       setPeerCount(0);
     };
-  }, [currentPlan?.id, user?.id, applyRemoteData]);
+  }, [currentPlan?.id, user?.id, bootstrapComplete, applyRemoteData]);
 
   // Best-effort lock release when the user closes the tab. Browsers
   // are aggressive about killing in-flight requests on unload, so the
