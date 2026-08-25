@@ -92,6 +92,7 @@ export default function App() {
   const [pasteReminderUrl, setPasteReminderUrl] = useState<string | null>(null);
   const [pasteReminderClipboard, setPasteReminderClipboard] = useState<string | null>(null);
   const [pasteReminderMinting, setPasteReminderMinting] = useState(false);
+  const mintStartedRef = useRef(false);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -102,6 +103,7 @@ export default function App() {
     setPasteReminderUrl(null);
     setPasteReminderClipboard(null);
     setPasteReminderMinting(false);
+    mintStartedRef.current = false;
     // Dismissing the strip finishes onboarding (user chose a clean hive)
     if (!onboarded) {
       finishOnboarding();
@@ -299,13 +301,18 @@ export default function App() {
   useEffect(() => {
     if (onboarded || isViewOnly || joinedViaShareLink) return;
     if (!currentPlan || currentPlan.buildings.length < 5) return;
-    if (pasteReminderUrl || pasteReminderMinting) return; // already shown or minting
+    if (pasteReminderUrl) return; // already minted
 
     // Show strip immediately (minting state)
-    setPasteReminderMinting(true);
+    if (!pasteReminderMinting) {
+      setPasteReminderMinting(true);
+    }
 
-    // Wait for bootstrap, then mint the token
+    // Wait for bootstrap, then mint the token (exactly once)
     if (!bootstrapComplete) return;
+    if (mintStartedRef.current) return; // already minting or minted
+
+    mintStartedRef.current = true;
 
     const mintAndShowStrip = async () => {
       try {
