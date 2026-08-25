@@ -88,10 +88,33 @@ export default function App() {
   const [toast, setToast] = useState<string | null>(null);
   const [firstRunShare, setFirstRunShare] = useState(false);
   const autoAppliedRef = useRef(false);
+  const [pasteReminderUrl, setPasteReminderUrl] = useState<string | null>(null);
+  const [pasteReminderClipboard, setPasteReminderClipboard] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToast(msg);
     window.setTimeout(() => setToast(null), 2200);
+  };
+
+  const dismissPasteReminder = () => {
+    setPasteReminderUrl(null);
+    setPasteReminderClipboard(null);
+  };
+
+  const copyFromReminder = async () => {
+    if (!pasteReminderClipboard) return;
+    try {
+      const { copyToClipboard } = await import('./utils/storage');
+      const ok = await copyToClipboard(pasteReminderClipboard);
+      if (ok) {
+        showToast('Copied again. Paste in Discord.');
+      } else {
+        showToast('Could not copy to clipboard');
+      }
+    } catch (e) {
+      console.error('[reminder] copy failed:', e);
+      showToast('Could not copy to clipboard');
+    }
   };
 
   const dismissWhatsNew = () => {
@@ -320,8 +343,36 @@ export default function App() {
         isViewOnly={isViewOnly}
       />
 
+      {/* Paste Reminder Strip - shown after first-run copy until dismissed */}
+      {!isViewOnly && pasteReminderUrl && (
+        <div className="paste-reminder">
+          <div className="paste-reminder-content">
+            <div className="paste-reminder-text">
+              <strong>Paste in Discord</strong>
+              <span className="paste-reminder-url">{pasteReminderUrl}</span>
+            </div>
+            <div className="paste-reminder-actions">
+              <button 
+                className="paste-reminder-btn paste-reminder-copy" 
+                onClick={copyFromReminder}
+                title="Copy again"
+              >
+                📋
+              </button>
+              <button 
+                className="paste-reminder-btn paste-reminder-close" 
+                onClick={dismissPasteReminder}
+                title="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Grid Area */}
-      <main className="grid-area">
+      <main className={`grid-area ${pasteReminderUrl ? 'with-reminder' : ''}`}>
         <HiveGrid
           buildings={currentPlan.buildings}
           gridWidth={currentPlan.gridWidth}
@@ -411,8 +462,14 @@ export default function App() {
               if (ok) {
                 trackEvent(Events.COLLAB_LINK_COPIED, { type: 'view', source: 'first_run' });
                 showToast('Copied. Paste it in Discord.');
+                // Show persistent reminder
+                setPasteReminderUrl(viewUrl);
+                setPasteReminderClipboard(clipboardText);
               } else {
                 showToast('Link ready — tap Share to copy it');
+                // Show persistent reminder even when copy fails - they need the URL on screen
+                setPasteReminderUrl(viewUrl);
+                setPasteReminderClipboard(clipboardText);
               }
             } catch (e) {
               console.error('[first-run] share link generation failed:', e);
