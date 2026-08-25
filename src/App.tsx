@@ -99,6 +99,10 @@ export default function App() {
   const dismissPasteReminder = () => {
     setPasteReminderUrl(null);
     setPasteReminderClipboard(null);
+    // Dismissing the strip finishes onboarding (user chose a clean hive)
+    if (!onboarded) {
+      finishOnboarding();
+    }
   };
 
   const copyFromReminder = async () => {
@@ -108,6 +112,10 @@ export default function App() {
       const ok = await copyToClipboard(pasteReminderClipboard);
       if (ok) {
         showToast('Copied again. Paste in Discord.');
+        // Copying from strip finishes onboarding (user shared with alliance)
+        if (!onboarded) {
+          finishOnboarding();
+        }
       } else {
         showToast('Could not copy to clipboard');
       }
@@ -131,6 +139,10 @@ export default function App() {
         url: pasteReminderUrl,
       });
       showToast('Sent!');
+      // Sending from strip finishes onboarding (user shared with alliance)
+      if (!onboarded) {
+        finishOnboarding();
+      }
     } catch (shareError: any) {
       if (shareError.name === 'AbortError') {
         console.log('[reminder] navigator.share cancelled by user');
@@ -278,6 +290,30 @@ export default function App() {
     trackEvent(Events.ONBOARDING_CHOICE, { choice: 'template', source: 'auto' });
   }, [currentPlan, onboarded, handleApplyTemplate]);
 
+  // Hive-first onboarding: mint view-only token in background for brand-new
+  // users with Diamond Defense on the grid, show persistent strip immediately
+  useEffect(() => {
+    if (onboarded || isViewOnly || joinedViaShareLink) return;
+    if (!currentPlan || currentPlan.buildings.length < 5) return;
+    if (pasteReminderUrl) return; // already minted
+
+    const mintAndShowStrip = async () => {
+      try {
+        const { getOrCreateShareTokens } = await import('./utils/cloudStorage');
+        const tokens = await getOrCreateShareTokens(currentPlan.id);
+        const baseUrl = window.location.origin + window.location.pathname;
+        const viewUrl = `${baseUrl}?view=${tokens.view_token}`;
+        const clipboardText = `${currentPlan.name} — view only (paste in Discord)\n${viewUrl}`;
+        setPasteReminderUrl(viewUrl);
+        setPasteReminderClipboard(clipboardText);
+      } catch (e) {
+        console.error('[hive-first] token mint failed:', e);
+      }
+    };
+
+    mintAndShowStrip();
+  }, [currentPlan, onboarded, isViewOnly, joinedViaShareLink, pasteReminderUrl]);
+
   // Pre-select HQ when on a blank grid, so mobile users can tap once to place
   // instead of opening drawer → picking HQ → tapping grid (three steps).
   useEffect(() => {
@@ -325,7 +361,7 @@ export default function App() {
     );
   }
 
-  const showOnboarding = !onboarded && !shareTab && !joinedViaShareLink && currentPlan.buildings.length >= 5;
+  const showOnboarding = false; // Modal disabled for hive-first onboarding (PR #27)
 
   return (
     <div className="app">
@@ -551,7 +587,7 @@ export default function App() {
       )}
 
       {/* One-time "what's new" announcement (yields to first-run onboarding) */}
-      {showWhatsNew && !showOnboarding && !joinedViaShareLink && currentPlan && !shareTab && (
+      {showWhatsNew && onboarded && !joinedViaShareLink && currentPlan && !shareTab && (
         <WhatsNewModal
           onClose={dismissWhatsNew}
           onTryCollab={() => {
