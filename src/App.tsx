@@ -91,6 +91,7 @@ export default function App() {
   const autoAppliedRef = useRef(false);
   const [pasteReminderUrl, setPasteReminderUrl] = useState<string | null>(null);
   const [pasteReminderClipboard, setPasteReminderClipboard] = useState<string | null>(null);
+  const [pasteReminderMinting, setPasteReminderMinting] = useState(false);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -100,6 +101,7 @@ export default function App() {
   const dismissPasteReminder = () => {
     setPasteReminderUrl(null);
     setPasteReminderClipboard(null);
+    setPasteReminderMinting(false);
     // Dismissing the strip finishes onboarding (user chose a clean hive)
     if (!onboarded) {
       finishOnboarding();
@@ -291,14 +293,19 @@ export default function App() {
     trackEvent(Events.ONBOARDING_CHOICE, { choice: 'template', source: 'auto' });
   }, [currentPlan, onboarded, handleApplyTemplate]);
 
-  // Hive-first onboarding: mint view-only token in background for brand-new
-  // users with Diamond Defense on the grid, show persistent strip immediately.
-  // CRITICAL: Wait for bootstrap to complete so the plan is upserted to cloud first.
+  // Hive-first onboarding: show strip as soon as hive appears, mint token in background.
+  // Show strip immediately when first-run hive is on screen (5+ buildings), even before
+  // view token exists. While minting: "Getting your alliance link...". When ready: enable CTA.
   useEffect(() => {
     if (onboarded || isViewOnly || joinedViaShareLink) return;
     if (!currentPlan || currentPlan.buildings.length < 5) return;
-    if (pasteReminderUrl) return; // already minted
-    if (!bootstrapComplete) return; // wait for bootstrap to upsert seed to cloud
+    if (pasteReminderUrl || pasteReminderMinting) return; // already shown or minting
+
+    // Show strip immediately (minting state)
+    setPasteReminderMinting(true);
+
+    // Wait for bootstrap, then mint the token
+    if (!bootstrapComplete) return;
 
     const mintAndShowStrip = async () => {
       try {
@@ -309,13 +316,15 @@ export default function App() {
         const clipboardText = `${currentPlan.name} — view only (paste in Discord)\n${viewUrl}`;
         setPasteReminderUrl(viewUrl);
         setPasteReminderClipboard(clipboardText);
+        setPasteReminderMinting(false);
       } catch (e) {
         console.error('[hive-first] token mint failed:', e);
+        setPasteReminderMinting(false);
       }
     };
 
     mintAndShowStrip();
-  }, [currentPlan, onboarded, isViewOnly, joinedViaShareLink, pasteReminderUrl, bootstrapComplete]);
+  }, [currentPlan, onboarded, isViewOnly, joinedViaShareLink, pasteReminderUrl, pasteReminderMinting, bootstrapComplete]);
 
   // Pre-select HQ when on a blank grid, so mobile users can tap once to place
   // instead of opening drawer → picking HQ → tapping grid (three steps).
@@ -406,33 +415,43 @@ export default function App() {
         isViewOnly={isViewOnly}
       />
 
-      {/* Paste Reminder Strip - shown after first-run copy until dismissed */}
-      {!isViewOnly && pasteReminderUrl && (
+      {/* Paste Reminder Strip - shown as soon as first-run hive appears */}
+      {!isViewOnly && (pasteReminderUrl || pasteReminderMinting) && (
         <div className="paste-reminder">
           <div className="paste-reminder-content">
-            <div className="paste-reminder-text">
-              <strong>Paste in Discord</strong>
-              <span className="paste-reminder-url">{pasteReminderUrl}</span>
+            <div className="paste-reminder-info">
+              {pasteReminderMinting ? (
+                <>
+                  <strong>Getting your alliance link…</strong>
+                  <span className="paste-reminder-hint">Share this hive with your alliance</span>
+                </>
+              ) : (
+                <>
+                  <strong>Share with your alliance</strong>
+                  <span className="paste-reminder-url">{pasteReminderUrl}</span>
+                </>
+              )}
             </div>
             <div className="paste-reminder-actions">
-              {typeof navigator !== 'undefined' && 'share' in navigator && (
+              {typeof navigator !== 'undefined' && 'share' in navigator ? (
                 <button 
-                  className="paste-reminder-btn paste-reminder-share" 
+                  className="paste-reminder-primary" 
                   onClick={shareFromReminder}
-                  title="Send to Discord"
+                  disabled={pasteReminderMinting}
                 >
-                  📤
+                  📤 Send to Discord
+                </button>
+              ) : (
+                <button 
+                  className="paste-reminder-primary" 
+                  onClick={copyFromReminder}
+                  disabled={pasteReminderMinting}
+                >
+                  📋 Copy alliance link
                 </button>
               )}
               <button 
-                className="paste-reminder-btn paste-reminder-copy" 
-                onClick={copyFromReminder}
-                title="Copy again"
-              >
-                📋
-              </button>
-              <button 
-                className="paste-reminder-btn paste-reminder-close" 
+                className="paste-reminder-dismiss" 
                 onClick={dismissPasteReminder}
                 title="Dismiss"
               >
@@ -444,7 +463,7 @@ export default function App() {
       )}
 
       {/* Main Grid Area */}
-      <main className={`grid-area ${pasteReminderUrl ? 'with-reminder' : ''}`}>
+      <main className={`grid-area ${pasteReminderUrl || pasteReminderMinting ? 'with-reminder' : ''}`}>
         <HiveGrid
           buildings={currentPlan.buildings}
           gridWidth={currentPlan.gridWidth}
