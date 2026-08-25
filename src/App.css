@@ -22,7 +22,7 @@
 }
 
 .grid-area.with-reminder {
-  margin-top: 107px; /* 60px toolbar + 47px reminder */
+  margin-top: 132px; /* 60px toolbar + 72px reminder */
 }
 
 
@@ -327,7 +327,7 @@ input:focus-visible {
   }
 
   .grid-area.with-reminder {
-    margin-top: 96px; /* 56px toolbar + 40px reminder */
+    margin-top: 118px; /* 56px toolbar + 62px reminder */
   }
 
   .paste-reminder {
@@ -335,22 +335,28 @@ input:focus-visible {
   }
 
   .paste-reminder-content {
-    padding: 8px 10px;
-    gap: 8px;
+    padding: 10px 12px;
+    gap: 10px;
   }
 
-  .paste-reminder-text strong {
-    font-size: 12px;
+  .paste-reminder-info strong {
+    font-size: 13px;
   }
 
-  .paste-reminder-url {
+  .paste-reminder-url,
+  .paste-reminder-hint {
     font-size: 11px;
   }
 
-  .paste-reminder-btn {
-    width: 28px;
-    height: 28px;
-    font-size: 12px;
+  .paste-reminder-primary {
+    font-size: 13px;
+    padding: 8px 16px;
+  }
+
+  .paste-reminder-dismiss {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
   }
 
   /* Zoom controls - smaller and more compact */
@@ -417,7 +423,7 @@ input:focus-visible {
   }
 
   .grid-area.with-reminder {
-    margin-top: 86px; /* 50px toolbar + 36px reminder */
+    margin-top: 106px; /* 50px toolbar + 56px reminder */
   }
 
   .paste-reminder {
@@ -425,21 +431,28 @@ input:focus-visible {
   }
 
   .paste-reminder-content {
-    padding: 6px 8px;
+    padding: 8px 10px;
+    gap: 8px;
   }
 
-  .paste-reminder-text strong {
-    font-size: 11px;
+  .paste-reminder-info strong {
+    font-size: 12px;
   }
 
-  .paste-reminder-url {
+  .paste-reminder-url,
+  .paste-reminder-hint {
     font-size: 10px;
   }
 
-  .paste-reminder-btn {
-    width: 26px;
-    height: 26px;
-    font-size: 11px;
+  .paste-reminder-primary {
+    font-size: 12px;
+    padding: 7px 12px;
+  }
+
+  .paste-reminder-dismiss {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
   }
 
   .floating-buttons {
@@ -527,92 +540,123 @@ input:focus-visible {
   left: 0;
   right: 0;
   z-index: 190;
-  background: rgba(102, 126, 234, 0.15);
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(217, 119, 6, 0.15) 100%);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(102, 126, 234, 0.3);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(234, 179, 8, 0.4);
+  box-shadow: 
+    0 2px 10px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(234, 179, 8, 0.15);
 }
 
 .paste-reminder-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
-  gap: 12px;
+  padding: 12px 16px;
+  gap: 16px;
   max-width: 1400px;
   margin: 0 auto;
 }
 
-.paste-reminder-text {
+.paste-reminder-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   flex: 1;
   min-width: 0;
 }
 
-.paste-reminder-text strong {
-  font-size: 13px;
-  color: #c7d2fe;
-  font-weight: 600;
+.paste-reminder-info strong {
+  font-size: 14px;
+  color: #fef3c7;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(234, 179, 8, 0.4);
 }
 
 .paste-reminder-url {
   font-size: 12px;
-  color: #a5b4fc;
+  color: #fde68a;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: 'Courier New', monospace;
+  opacity: 0.9;
+}
+
+.paste-reminder-hint {
+  font-size: 12px;
+  color: #fde68a;
+  opacity: 0.8;
 }
 
 .paste-reminder-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-shrink: 0;
+  align-items: center;
 }
 
-.paste-reminder-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.08);
-  color: #e0e0e0;
+.paste-reminder-primary {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, #eab308 0%, #d97706 100%);
+  color: #0f172a;
   font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
+  box-shadow: 
+    0 2px 8px rgba(234, 179, 8, 0.4),
+    0 0 20px rgba(234, 179, 8, 0.2);
+  white-space: nowrap;
 }
 
-.paste-reminder-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+.paste-reminder-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  box-shadow: 
+    0 4px 12px rgba(234, 179, 8, 0.5),
+    0 0 30px rgba(234, 179, 8, 0.3);
+  transform: translateY(-1px);
+}
+
+.paste-reminder-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.paste-reminder-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.paste-reminder-dismiss {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: #e0e0e0;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.paste-reminder-dismiss:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.5);
   transform: scale(1.05);
 }
 
-.paste-reminder-btn:active {
+.paste-reminder-dismiss:active {
   transform: scale(0.95);
-}
-
-.paste-reminder-share:hover {
-  background: rgba(34, 197, 94, 0.3);
-  border-color: rgba(34, 197, 94, 0.5);
-}
-
-.paste-reminder-copy:hover {
-  background: rgba(102, 126, 234, 0.3);
-  border-color: rgba(102, 126, 234, 0.5);
-}
-
-.paste-reminder-close {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.paste-reminder-close:hover {
-  background: rgba(239, 68, 68, 0.3);
-  border-color: rgba(239, 68, 68, 0.5);
 }
 
