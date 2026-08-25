@@ -117,6 +117,30 @@ export default function App() {
     }
   };
 
+  const shareFromReminder = async () => {
+    if (!pasteReminderUrl || !currentPlan) return;
+    if (typeof navigator === 'undefined' || !('share' in navigator)) {
+      // Fallback to copy
+      copyFromReminder();
+      return;
+    }
+    try {
+      await navigator.share({
+        title: currentPlan.name,
+        text: `${currentPlan.name} — view only (paste in Discord)`,
+        url: pasteReminderUrl,
+      });
+      showToast('Sent!');
+    } catch (shareError: any) {
+      if (shareError.name === 'AbortError') {
+        console.log('[reminder] navigator.share cancelled by user');
+      } else {
+        console.error('[reminder] navigator.share failed:', shareError);
+        showToast('Share failed — link is still copied');
+      }
+    }
+  };
+
   const dismissWhatsNew = () => {
     localStorage.setItem(WHATS_NEW_KEY, '1');
     setShowWhatsNew(false);
@@ -352,6 +376,15 @@ export default function App() {
               <span className="paste-reminder-url">{pasteReminderUrl}</span>
             </div>
             <div className="paste-reminder-actions">
+              {typeof navigator !== 'undefined' && 'share' in navigator && (
+                <button 
+                  className="paste-reminder-btn paste-reminder-share" 
+                  onClick={shareFromReminder}
+                  title="Send to Discord"
+                >
+                  📤
+                </button>
+              )}
               <button 
                 className="paste-reminder-btn paste-reminder-copy" 
                 onClick={copyFromReminder}
@@ -448,9 +481,10 @@ export default function App() {
             trackEvent(Events.NAMES_STAMPED, { count: names.length });
             finishOnboarding();
             
-            // Generate share link inline and copy to clipboard, then show toast.
+            // Generate share link inline and (optionally) open native share sheet,
+            // then always copy to clipboard + show reminder strip.
             // Don't open the full ShareHub on first-run — visitors should see
-            // the hive immediately after copy, not another overlay to dismiss.
+            // the hive immediately after share, not another overlay to dismiss.
             try {
               const { getOrCreateShareTokens } = await import('./utils/cloudStorage');
               const { copyToClipboard } = await import('./utils/storage');
@@ -458,19 +492,52 @@ export default function App() {
               const baseUrl = window.location.origin + window.location.pathname;
               const viewUrl = `${baseUrl}?view=${tokens.view_token}`;
               const clipboardText = `${currentPlan.name} — view only (paste in Discord)\n${viewUrl}`;
-              const ok = await copyToClipboard(clipboardText);
-              if (ok) {
-                trackEvent(Events.COLLAB_LINK_COPIED, { type: 'view', source: 'first_run' });
-                showToast('Copied. Paste it in Discord.');
-                // Show persistent reminder
-                setPasteReminderUrl(viewUrl);
-                setPasteReminderClipboard(clipboardText);
-              } else {
-                showToast('Link ready — tap Share to copy it');
-                // Show persistent reminder even when copy fails - they need the URL on screen
-                setPasteReminderUrl(viewUrl);
-                setPasteReminderClipboard(clipboardText);
+              
+              let sharedViaSheet = false;
+              
+              // Try native share first if available
+              if (typeof navigator !== 'undefined' && 'share' in navigator) {
+                try {
+                  await navigator.share({
+                    title: currentPlan.name,
+                    text: `${currentPlan.name} — view only (paste in Discord)`,
+                    url: viewUrl,
+                  });
+                  sharedViaSheet = true;
+                  console.log('[first-run] navigator.share succeeded');
+                } catch (shareError: any) {
+                  // AbortError means user cancelled — not an error, just continue
+                  if (shareError.name === 'AbortError') {
+                    console.log('[first-run] navigator.share cancelled by user');
+                  } else {
+                    console.error('[first-run] navigator.share failed:', shareError);
+                  }
+                }
               }
+              
+              // Always copy to clipboard and show the persistent reminder strip
+              const ok = await copyToClipboard(clipboardText);
+              const eventSource = sharedViaSheet ? 'first_run_share' : 'first_run';
+              
+              if (ok) {
+                trackEvent(Events.COLLAB_LINK_COPIED, { type: 'view', source: eventSource });
+                if (sharedViaSheet) {
+                  showToast('Sent! Link also copied.');
+                } else {
+                  showToast('Copied. Paste it in Discord.');
+                }
+              } else {
+                trackEvent(Events.COLLAB_LINK_COPIED, { type: 'view', source: eventSource });
+                if (sharedViaSheet) {
+                  showToast('Sent! (Clipboard copy failed, use the strip below)');
+                } else {
+                  showToast('Link ready — tap Share to copy it');
+                }
+              }
+              
+              // Show persistent reminder (always, even if share sheet was used or copy failed)
+              setPasteReminderUrl(viewUrl);
+              setPasteReminderClipboard(clipboardText);
             } catch (e) {
               console.error('[first-run] share link generation failed:', e);
               showToast('⚠️ Could not generate link — tap Share to try again');

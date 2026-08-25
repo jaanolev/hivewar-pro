@@ -13,6 +13,7 @@ interface Props {
 export default function OnboardingModal({ onStampAndShare, onDismiss, onStartBlank }: Props) {
   const [names, setNames] = useState(['', '', '']);
   const [showNameFields, setShowNameFields] = useState(false);
+  const [hasNativeShare, setHasNativeShare] = useState(false);
   
   const handleClose = () => {
     trackEvent(Events.ONBOARDING_CHOICE, { choice: 'keep_template' });
@@ -23,6 +24,8 @@ export default function OnboardingModal({ onStampAndShare, onDismiss, onStartBla
 
   useEffect(() => {
     trackEvent(Events.ONBOARDING_SHOWN);
+    // Check if native share is available
+    setHasNativeShare(typeof navigator !== 'undefined' && !!navigator.share);
   }, []);
 
   const setName = (index: number, value: string) => {
@@ -65,7 +68,7 @@ export default function OnboardingModal({ onStampAndShare, onDismiss, onStartBla
               onClick={sendToAlliance}
               style={{ fontSize: 16, padding: '14px 24px' }}
             >
-              📋 Copy alliance link
+              {hasNativeShare ? '📤 Send to Discord' : '📋 Copy alliance link'}
             </button>
           </div>
 
