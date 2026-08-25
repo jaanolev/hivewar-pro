@@ -596,6 +596,11 @@ input:focus-visible {
   transform: scale(0.95);
 }
 
+.paste-reminder-share:hover {
+  background: rgba(34, 197, 94, 0.3);
+  border-color: rgba(34, 197, 94, 0.5);
+}
+
 .paste-reminder-copy:hover {
   background: rgba(102, 126, 234, 0.3);
   border-color: rgba(102, 126, 234, 0.5);
