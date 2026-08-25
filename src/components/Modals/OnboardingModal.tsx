@@ -41,7 +41,7 @@ export default function OnboardingModal({ onStampAndShare, onDismiss, onStartBla
   };
 
   return (
-    <div className="modal-overlay" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={handleClose}>
       <div
         className="modal-content whatsnew-modal"
         style={sheetStyle}
