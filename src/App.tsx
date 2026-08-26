@@ -420,6 +420,7 @@ export default function App() {
         buildingCount={buildingCount}
         defensePower={defensePower}
         isViewOnly={isViewOnly}
+        onboarded={onboarded}
       />
 
       {/* Paste Reminder Strip - shown as soon as first-run hive appears */}
@@ -492,8 +493,8 @@ export default function App() {
         )}
       </main>
 
-      {/* Building Palette */}
-      {!isViewOnly && (
+      {/* Building Palette - Hidden during first-run until visitor shares the hive */}
+      {!isViewOnly && onboarded && (
         <BuildingPalette
           selectedTypeId={editorState.selectedBuildingTypeId}
           onSelectType={handleSelectBuildingType}
@@ -654,6 +655,7 @@ export default function App() {
                 }
               },
               onSave: () => alert('Plan saved! ✓'),
+              onboarded,
             }}
           />
         </Suspense>

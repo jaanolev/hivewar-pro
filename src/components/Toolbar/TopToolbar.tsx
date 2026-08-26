@@ -22,6 +22,7 @@ interface TopToolbarProps {
   buildingCount: number;
   defensePower: number;
   isViewOnly?: boolean;
+  onboarded?: boolean;
 }
 
 export default function TopToolbar({
@@ -45,6 +46,7 @@ export default function TopToolbar({
   buildingCount,
   defensePower,
   isViewOnly = false,
+  onboarded = true,
 }: TopToolbarProps) {
   const tools: { mode: ToolMode; icon: string; label: string }[] = isViewOnly
     ? [
@@ -138,9 +140,11 @@ export default function TopToolbar({
               <span className="btn-icon">📋</span>
               <span className="btn-label">Templates</span>
             </button>
-            <button className="action-btn danger" onClick={onClear} title="Clear All">
-              <span className="btn-icon">🗑️</span>
-            </button>
+            {onboarded && (
+              <button className="action-btn danger" onClick={onClear} title="Clear All">
+                <span className="btn-icon">🗑️</span>
+              </button>
+            )}
             <button className="action-btn action-btn--save" onClick={onSave} title="Save">
               <span className="btn-icon">💾</span>
             </button>
