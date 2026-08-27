@@ -16,6 +16,7 @@ export interface MenuEditorControls {
   onTemplates: () => void;
   onClear: () => void;
   onSave: () => void;
+  onboarded?: boolean;
 }
 
 interface MenuModalProps {
@@ -129,12 +130,14 @@ export default function MenuModal({
                 📋 Templates
               </button>
               <button onClick={editorControls.onSave}>💾 Save</button>
-              <button
-                className="menu-control-danger"
-                onClick={editorControls.onClear}
-              >
-                🗑️ Clear all
-              </button>
+              {editorControls.onboarded !== false && (
+                <button
+                  className="menu-control-danger"
+                  onClick={editorControls.onClear}
+                >
+                  🗑️ Clear all
+                </button>
+              )}
             </div>
           </div>
 
