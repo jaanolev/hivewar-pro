@@ -205,40 +205,45 @@ export default function HiveGrid({
         const stage = stageRef.current;
         if (!stage) return;
 
-        // For touch events, calculate pointer position manually to ensure correct
-        // offset handling when the Stage is pushed down by the paste-reminder strip.
-        // On touch devices, stage.getPointerPosition() can return incorrect coordinates
-        // when there are layout shifts from dynamic chrome (gold share strip, etc).
-        let pointer;
-        const evt = e.evt;
-        if ('touches' in evt || 'changedTouches' in evt) {
-          // Touch event - get coordinates from the touch
-          const touch = evt.touches?.[0] || evt.changedTouches?.[0];
-          if (touch && containerRef.current) {
-            const rect = containerRef.current.getBoundingClientRect();
-            pointer = {
-              x: touch.clientX - rect.left,
-              y: touch.clientY - rect.top
-            };
+        // Get pointer position in canvas-local coordinates
+        let pointer = stage.getPointerPosition();
+        
+        // If null (common on touchend/onTap), recover from touch events
+        if (!pointer) {
+          const evt = e.evt;
+          if ('touches' in evt || 'changedTouches' in evt) {
+            const touch = evt.changedTouches?.[0] || evt.touches?.[0];
+            if (touch) {
+              // Map client coordinates through the canvas element's bounding rect
+              const content = stage.content;
+              if (content) {
+                const rect = content.getBoundingClientRect();
+                // Scale by the ratio of stage dimensions to canvas pixel size
+                pointer = {
+                  x: (touch.clientX - rect.left) * (stage.width() / rect.width),
+                  y: (touch.clientY - rect.top) * (stage.height() / rect.height)
+                };
+              }
+            }
           }
-        } else {
-          // Mouse event - use Konva's built-in method
-          pointer = stage.getPointerPosition();
         }
         
         if (!pointer) return;
 
-        const gridPos = canvasToGrid(
-          (pointer.x - viewport.x) / viewport.scale,
-          (pointer.y - viewport.y) / viewport.scale
-        );
+        // Convert canvas-local coordinates to world coordinates by inverting
+        // the Stage's transform (which includes viewport.x, viewport.y, viewport.scale)
+        const transform = stage.getAbsoluteTransform().copy();
+        transform.invert();
+        const worldPos = transform.point(pointer);
+
+        const gridPos = canvasToGrid(worldPos.x, worldPos.y);
 
         onPlaceBuilding(gridPos.x, gridPos.y);
       } else {
         onSelectBuilding(null);
       }
     }
-  }, [canEdit, editorState, viewport, onPlaceBuilding, onSelectBuilding, stageRef]);
+  }, [canEdit, editorState, onPlaceBuilding, onSelectBuilding, stageRef]);
 
   // Handle stage drag
   const handleDragStart = useCallback(() => {
