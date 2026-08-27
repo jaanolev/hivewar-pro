@@ -48,7 +48,7 @@ export default function TopToolbar({
   isViewOnly = false,
   onboarded = true,
 }: TopToolbarProps) {
-  const tools: { mode: ToolMode; icon: string; label: string }[] = isViewOnly
+  const tools: { mode: ToolMode; icon: string; label: string }[] = isViewOnly || !onboarded
     ? [
         { mode: 'select', icon: '👆', label: 'Select' },
         { mode: 'pan', icon: '✋', label: 'Pan' },
