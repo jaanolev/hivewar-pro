@@ -205,7 +205,27 @@ export default function HiveGrid({
         const stage = stageRef.current;
         if (!stage) return;
 
-        const pointer = stage.getPointerPosition();
+        // For touch events, calculate pointer position manually to ensure correct
+        // offset handling when the Stage is pushed down by the paste-reminder strip.
+        // On touch devices, stage.getPointerPosition() can return incorrect coordinates
+        // when there are layout shifts from dynamic chrome (gold share strip, etc).
+        let pointer;
+        const evt = e.evt;
+        if ('touches' in evt || 'changedTouches' in evt) {
+          // Touch event - get coordinates from the touch
+          const touch = evt.touches?.[0] || evt.changedTouches?.[0];
+          if (touch && containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            pointer = {
+              x: touch.clientX - rect.left,
+              y: touch.clientY - rect.top
+            };
+          }
+        } else {
+          // Mouse event - use Konva's built-in method
+          pointer = stage.getPointerPosition();
+        }
+        
         if (!pointer) return;
 
         const gridPos = canvasToGrid(
