@@ -140,7 +140,7 @@ export default function App() {
     try {
       await navigator.share({
         title: currentPlan.name,
-        text: `${currentPlan.name} — view only (paste in Discord)`,
+        text: `War plan: ${currentPlan.name} — tap to see HQ positions`,
         url: pasteReminderUrl,
       });
       showToast('Sent!');
@@ -320,7 +320,7 @@ export default function App() {
         const tokens = await getOrCreateShareTokens(currentPlan.id);
         const baseUrl = window.location.origin + window.location.pathname;
         const viewUrl = `${baseUrl}?view=${tokens.view_token}`;
-        const clipboardText = `${currentPlan.name} — view only (paste in Discord)\n${viewUrl}`;
+        const clipboardText = `War plan: ${currentPlan.name} — tap to see HQ positions\n${viewUrl}`;
         setPasteReminderUrl(viewUrl);
         setPasteReminderClipboard(clipboardText);
         setPasteReminderMinting(false);
@@ -557,7 +557,7 @@ export default function App() {
               const tokens = await getOrCreateShareTokens(currentPlan.id);
               const baseUrl = window.location.origin + window.location.pathname;
               const viewUrl = `${baseUrl}?view=${tokens.view_token}`;
-              const clipboardText = `${currentPlan.name} — view only (paste in Discord)\n${viewUrl}`;
+              const clipboardText = `War plan: ${currentPlan.name} — tap to see HQ positions\n${viewUrl}`;
               
               let sharedViaSheet = false;
               
@@ -566,7 +566,7 @@ export default function App() {
                 try {
                   await navigator.share({
                     title: currentPlan.name,
-                    text: `${currentPlan.name} — view only (paste in Discord)`,
+                    text: `War plan: ${currentPlan.name} — tap to see HQ positions`,
                     url: viewUrl,
                   });
                   sharedViaSheet = true;

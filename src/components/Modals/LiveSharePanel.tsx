@@ -95,7 +95,7 @@ export default function LiveSharePanel({ planId, autoCopyView = false }: Props) 
   useEffect(() => {
     if (!autoCopyView || !tokens) return;
     const url = `${baseUrl}?view=${tokens.view_token}`;
-    const clipboardText = `${planName} — view only (paste in Discord)\n${url}`;
+    const clipboardText = `War plan: ${planName} — tap to see HQ positions\n${url}`;
     copyToClipboard(clipboardText).then((ok) => {
       if (ok) trackEvent(Events.COLLAB_LINK_COPIED, { type: 'view', source: 'first_run' });
     });
@@ -155,7 +155,7 @@ function ShareLinkRow({
   async function copy() {
     // For view-only links, use Discord-friendly format with plan name
     const clipboardText = variant === 'view' && planName
-      ? `${planName} — view only (paste in Discord)\n${url}`
+      ? `War plan: ${planName} — tap to see HQ positions\n${url}`
       : url;
     const ok = await copyToClipboard(clipboardText);
     if (ok) {
