@@ -76,7 +76,7 @@ export function useHivePlan() {
     }
     
     // No cache - seed from Diamond Defense template SYNCHRONOUSLY (no await!)
-    const newPlan = createEmptyPlan('My First Hive');
+    const newPlan = createEmptyPlan('Diamond Defense');
     const diamondTemplate = HIVE_TEMPLATES.find(t => t.id === 'diamond-defense');
     if (diamondTemplate) {
       newPlan.buildings = diamondTemplate.buildings.map(b => ({
