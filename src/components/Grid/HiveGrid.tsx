@@ -212,7 +212,8 @@ export default function HiveGrid({
         if (!pointer) {
           const evt = e.evt;
           if ('touches' in evt || 'changedTouches' in evt) {
-            const touch = evt.changedTouches?.[0] || evt.touches?.[0];
+            const touchEvt = evt as TouchEvent;
+            const touch = touchEvt.changedTouches?.[0] || touchEvt.touches?.[0];
             if (touch) {
               // Map client coordinates through the canvas element's bounding rect
               const content = stage.content;
