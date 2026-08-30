@@ -693,6 +693,7 @@ export function useHivePlan() {
       setEditorState((prev) => ({
         ...prev,
         selectedBuildingId: newBuilding.id,
+        selectedBuildingTypeId: null,
         toolMode: 'select',
       }));
     },
