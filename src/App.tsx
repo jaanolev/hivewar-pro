@@ -92,6 +92,8 @@ export default function App() {
   const [pasteReminderUrl, setPasteReminderUrl] = useState<string | null>(null);
   const [pasteReminderClipboard, setPasteReminderClipboard] = useState<string | null>(null);
   const [pasteReminderMinting, setPasteReminderMinting] = useState(false);
+  const [pasteReminderError, setPasteReminderError] = useState(false);
+  const [hasEverCopied, setHasEverCopied] = useState(false);
   const mintStartedRef = useRef(false);
 
   const showToast = (msg: string) => {
@@ -103,6 +105,7 @@ export default function App() {
     setPasteReminderUrl(null);
     setPasteReminderClipboard(null);
     setPasteReminderMinting(false);
+    setPasteReminderError(false);
     mintStartedRef.current = false;
     // Dismissing the strip finishes onboarding (user chose a clean hive)
     if (!onboarded) {
@@ -116,7 +119,9 @@ export default function App() {
       const { copyToClipboard } = await import('./utils/storage');
       const ok = await copyToClipboard(pasteReminderClipboard);
       if (ok) {
-        showToast('Copied again. Paste in Discord.');
+        const toastMsg = hasEverCopied ? 'Copied again. Paste in Discord.' : 'Copied! Paste in Discord.';
+        showToast(toastMsg);
+        setHasEverCopied(true);
         // Copying from strip finishes onboarding (user shared with alliance)
         if (!onboarded) {
           finishOnboarding();
@@ -156,6 +161,14 @@ export default function App() {
         showToast('Share failed — link is still copied');
       }
     }
+  };
+
+  const retryMintTokens = () => {
+    console.log('[hive-first] Retrying token mint...');
+    // Reset all error state to trigger the effect again
+    setPasteReminderError(false);
+    setPasteReminderMinting(true);
+    mintStartedRef.current = false;
   };
 
   const dismissWhatsNew = () => {
@@ -301,22 +314,47 @@ export default function App() {
   useEffect(() => {
     if (onboarded || isViewOnly || joinedViaShareLink) return;
     if (!currentPlan || currentPlan.buildings.length < 5) return;
-    if (pasteReminderUrl) return; // already minted
+    if (pasteReminderUrl) return; // already have a URL
 
     // Show strip immediately (minting state)
-    if (!pasteReminderMinting) {
+    if (!pasteReminderMinting && !pasteReminderError) {
       setPasteReminderMinting(true);
     }
 
-    // Wait for bootstrap, then mint the token (exactly once)
-    if (!bootstrapComplete) return;
-    if (mintStartedRef.current) return; // already minting or minted
-
-    mintStartedRef.current = true;
+    // Guard to prevent multiple simultaneous mint attempts
+    if (mintStartedRef.current) return;
 
     const mintAndShowStrip = async () => {
       try {
-        const { getOrCreateShareTokens } = await import('./utils/cloudStorage');
+        mintStartedRef.current = true;
+        
+        const { getOrCreateShareTokens, getExistingShareTokens } = await import('./utils/cloudStorage');
+        
+        // First, try to get existing tokens (fast path, no RPC needed)
+        console.log('[hive-first] Checking for existing tokens...');
+        const existingTokens = await getExistingShareTokens(currentPlan.id);
+        
+        if (existingTokens) {
+          console.log('[hive-first] Found existing tokens, using them immediately');
+          const baseUrl = window.location.origin + window.location.pathname;
+          const viewUrl = `${baseUrl}?view=${existingTokens.view_token}`;
+          const clipboardText = `War plan: ${currentPlan.name} — tap to see HQ positions\n${viewUrl}`;
+          setPasteReminderUrl(viewUrl);
+          setPasteReminderClipboard(clipboardText);
+          setPasteReminderMinting(false);
+          setPasteReminderError(false);
+          return;
+        }
+        
+        // No existing tokens - need to mint new ones
+        // Wait for bootstrap to complete so the plan is synced to the database
+        if (!bootstrapComplete) {
+          console.log('[hive-first] Waiting for bootstrap to complete before minting...');
+          mintStartedRef.current = false; // Reset so effect can try again
+          return;
+        }
+        
+        console.log('[hive-first] Minting new tokens via RPC...');
         const tokens = await getOrCreateShareTokens(currentPlan.id);
         const baseUrl = window.location.origin + window.location.pathname;
         const viewUrl = `${baseUrl}?view=${tokens.view_token}`;
@@ -324,14 +362,19 @@ export default function App() {
         setPasteReminderUrl(viewUrl);
         setPasteReminderClipboard(clipboardText);
         setPasteReminderMinting(false);
+        setPasteReminderError(false);
+        console.log('[hive-first] Token mint successful');
       } catch (e) {
         console.error('[hive-first] token mint failed:', e);
+        // Reset mint guard so user can retry
+        mintStartedRef.current = false;
         setPasteReminderMinting(false);
+        setPasteReminderError(true);
       }
     };
 
     mintAndShowStrip();
-  }, [currentPlan, onboarded, isViewOnly, joinedViaShareLink, pasteReminderUrl, pasteReminderMinting, bootstrapComplete]);
+  }, [currentPlan, onboarded, isViewOnly, joinedViaShareLink, pasteReminderUrl, pasteReminderMinting, pasteReminderError, bootstrapComplete]);
 
   // Pre-select HQ when on a blank grid, so mobile users can tap once to place
   // instead of opening drawer → picking HQ → tapping grid (three steps).
@@ -424,11 +467,16 @@ export default function App() {
       />
 
       {/* Paste Reminder Strip - shown as soon as first-run hive appears */}
-      {!isViewOnly && (pasteReminderUrl || pasteReminderMinting) && (
+      {!isViewOnly && (pasteReminderUrl || pasteReminderMinting || pasteReminderError) && (
         <div className="paste-reminder">
           <div className="paste-reminder-content">
             <div className="paste-reminder-info">
-              {pasteReminderMinting ? (
+              {pasteReminderError ? (
+                <>
+                  <strong>Couldn't get link</strong>
+                  <span className="paste-reminder-hint">Tap Retry to try again</span>
+                </>
+              ) : pasteReminderMinting ? (
                 <>
                   <strong>Getting your alliance link…</strong>
                   <span className="paste-reminder-hint">Share this hive with your alliance</span>
@@ -441,7 +489,14 @@ export default function App() {
               )}
             </div>
             <div className="paste-reminder-actions">
-              {typeof navigator !== 'undefined' && 'share' in navigator ? (
+              {pasteReminderError ? (
+                <button 
+                  className="paste-reminder-primary" 
+                  onClick={retryMintTokens}
+                >
+                  🔄 Retry link
+                </button>
+              ) : typeof navigator !== 'undefined' && 'share' in navigator ? (
                 <button 
                   className="paste-reminder-primary" 
                   onClick={shareFromReminder}
@@ -471,7 +526,7 @@ export default function App() {
       )}
 
       {/* Main Grid Area */}
-      <main className={`grid-area ${pasteReminderUrl || pasteReminderMinting ? 'with-reminder' : ''}`}>
+      <main className={`grid-area ${pasteReminderUrl || pasteReminderMinting || pasteReminderError ? 'with-reminder' : ''}`}>
         <HiveGrid
           buildings={currentPlan.buildings}
           gridWidth={currentPlan.gridWidth}

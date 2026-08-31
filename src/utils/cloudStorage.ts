@@ -70,6 +70,28 @@ export interface ShareTokens {
   view_token: string;
 }
 
+export async function getExistingShareTokens(planId: string): Promise<ShareTokens | null> {
+  const { data, error } = await supabase
+    .from('plans')
+    .select('share_token, view_token')
+    .eq('id', planId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[cloud] getExistingShareTokens failed:', error);
+    return null;
+  }
+
+  if (!data || !data.share_token || !data.view_token) {
+    return null;
+  }
+
+  return {
+    share_token: data.share_token,
+    view_token: data.view_token,
+  };
+}
+
 export async function getOrCreateShareTokens(planId: string): Promise<ShareTokens> {
   console.log('[cloud] getOrCreateShareTokens called for planId:', planId);
   
@@ -77,10 +99,20 @@ export async function getOrCreateShareTokens(planId: string): Promise<ShareToken
   const { data: { user } } = await supabase.auth.getUser();
   console.log('[cloud] current user:', user?.id, 'is_anonymous:', user?.is_anonymous);
   
+  // First, try to get existing tokens without calling the RPC
+  const existingTokens = await getExistingShareTokens(planId);
+  if (existingTokens) {
+    console.log('[cloud] Using existing share tokens from database');
+    return existingTokens;
+  }
+  
+  // No existing tokens, need to mint new ones via RPC
+  console.log('[cloud] No existing tokens, minting new ones via RPC');
+  
   // Retry logic to handle potential timing issues on mobile
   let lastError: any = null;
   const maxRetries = 3;
-  const retryDelays = [0, 500, 1000]; // 0ms, 500ms, 1000ms
+  const retryDelays = [0, 1000, 2000]; // 0ms, 1000ms, 2000ms (longer delays for DB commit time)
   
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     if (attempt > 0) {
