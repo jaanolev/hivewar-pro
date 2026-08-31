@@ -70,6 +70,71 @@ export interface ShareTokens {
   view_token: string;
 }
 
+export async function getExistingShareTokens(planId: string): Promise<ShareTokens | null> {
+  const { data, error } = await supabase
+    .from('plans')
+    .select('share_token, view_token')
+    .eq('id', planId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[cloud] getExistingShareTokens failed:', error);
+    return null;
+  }
+
+  if (!data || !data.share_token || !data.view_token) {
+    return null;
+  }
+
+  return {
+    share_token: data.share_token,
+    view_token: data.view_token,
+  };
+}
+
+async function ensurePlanOwnership(planId: string, userId: string): Promise<void> {
+  // Check if the plan's owner_user_id matches the current user.
+  // If not, re-upsert to fix ownership (this can happen when a seed plan
+  // was created before auth completed, or when anonymous sessions change).
+  console.log('[cloud] Checking plan ownership for planId:', planId, 'userId:', userId);
+  
+  const { data, error } = await supabase
+    .from('plans')
+    .select('owner_user_id, data')
+    .eq('id', planId)
+    .maybeSingle();
+  
+  if (error) {
+    console.error('[cloud] Failed to check plan ownership:', error);
+    return; // Continue anyway, let the mint attempt fail with a better error
+  }
+  
+  if (!data) {
+    console.error('[cloud] Plan not found in database:', planId);
+    throw new Error('Plan not found in database. Please refresh and try again.');
+  }
+  
+  const currentOwnerId = data.owner_user_id;
+  console.log('[cloud] Plan owner_user_id:', currentOwnerId, 'current user:', userId);
+  
+  if (currentOwnerId === userId) {
+    console.log('[cloud] Ownership is correct, proceeding with mint');
+    return;
+  }
+  
+  // Ownership mismatch - fix it by re-upserting the plan
+  console.warn('[cloud] Ownership mismatch detected! Re-upserting plan to fix ownership...');
+  console.warn('[cloud] Old owner:', currentOwnerId, '→ New owner:', userId);
+  
+  try {
+    await upsertPlan(data.data, userId);
+    console.log('[cloud] Successfully fixed plan ownership');
+  } catch (upsertError) {
+    console.error('[cloud] Failed to fix plan ownership:', upsertError);
+    throw new Error('Could not claim ownership of plan. Please refresh and try again.');
+  }
+}
+
 export async function getOrCreateShareTokens(planId: string): Promise<ShareTokens> {
   console.log('[cloud] getOrCreateShareTokens called for planId:', planId);
   
@@ -77,10 +142,28 @@ export async function getOrCreateShareTokens(planId: string): Promise<ShareToken
   const { data: { user } } = await supabase.auth.getUser();
   console.log('[cloud] current user:', user?.id, 'is_anonymous:', user?.is_anonymous);
   
+  if (!user) {
+    throw new Error('You must be signed in to create share links');
+  }
+  
+  // First, try to get existing tokens without calling the RPC
+  const existingTokens = await getExistingShareTokens(planId);
+  if (existingTokens) {
+    console.log('[cloud] Using existing share tokens from database');
+    return existingTokens;
+  }
+  
+  // No existing tokens, need to mint new ones via RPC
+  console.log('[cloud] No existing tokens, minting new ones via RPC');
+  
+  // CRITICAL: Ensure plan ownership is correct before attempting to mint.
+  // This fixes the "only the plan owner" error on anonymous first-run.
+  await ensurePlanOwnership(planId, user.id);
+  
   // Retry logic to handle potential timing issues on mobile
   let lastError: any = null;
   const maxRetries = 3;
-  const retryDelays = [0, 500, 1000]; // 0ms, 500ms, 1000ms
+  const retryDelays = [0, 1000, 2000]; // 0ms, 1000ms, 2000ms (longer delays for DB commit time)
   
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     if (attempt > 0) {
@@ -100,12 +183,18 @@ export async function getOrCreateShareTokens(planId: string): Promise<ShareToken
     lastError = error;
     console.error(`[cloud] getOrCreateShareTokens attempt ${attempt + 1} failed:`, error);
     
-    // Don't retry if it's a definitive auth/permission error
+    // Don't retry if it's a definitive auth error (but we already fixed ownership, so this shouldn't happen)
     const errorMessage = error?.message || '';
-    if (errorMessage.includes('must be signed in') || 
-        errorMessage.includes('only the plan owner')) {
-      console.log('[cloud] Auth/permission error detected, not retrying');
+    if (errorMessage.includes('must be signed in')) {
+      console.log('[cloud] Auth error detected, not retrying');
       break;
+    }
+    
+    // If we still get "only the plan owner" error after fixing ownership,
+    // there's a deeper issue - but retry once more in case of timing
+    if (errorMessage.includes('only the plan owner') && attempt === 0) {
+      console.log('[cloud] Ownership error after fix - will retry once');
+      continue;
     }
   }
   
