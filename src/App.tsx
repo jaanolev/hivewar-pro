@@ -91,7 +91,6 @@ export default function App() {
   const autoAppliedRef = useRef(false);
   const [pasteReminderUrl, setPasteReminderUrl] = useState<string | null>(null);
   const [pasteReminderClipboard, setPasteReminderClipboard] = useState<string | null>(null);
-  const [pasteReminderMinting, setPasteReminderMinting] = useState(false);
   const [pasteReminderError, setPasteReminderError] = useState(false);
   const [hasEverCopied, setHasEverCopied] = useState(false);
   const mintStartedRef = useRef(false);
@@ -104,7 +103,6 @@ export default function App() {
   const dismissPasteReminder = () => {
     setPasteReminderUrl(null);
     setPasteReminderClipboard(null);
-    setPasteReminderMinting(false);
     setPasteReminderError(false);
     mintStartedRef.current = false;
     // Dismissing the strip finishes onboarding (user chose a clean hive)
@@ -114,15 +112,41 @@ export default function App() {
   };
 
   const copyFromReminder = async () => {
-    if (!pasteReminderClipboard) return;
+    // If tokens aren't ready yet, finish minting first
+    if (!pasteReminderClipboard && currentPlan) {
+      try {
+        const { getOrCreateShareTokens, getExistingShareTokens } = await import('./utils/cloudStorage');
+        const tokens = await getExistingShareTokens(currentPlan.id) || await getOrCreateShareTokens(currentPlan.id);
+        const baseUrl = window.location.origin + window.location.pathname;
+        const viewUrl = `${baseUrl}?view=${tokens.view_token}`;
+        const clipboardText = `War plan: ${currentPlan.name} — tap to see HQ positions\n${viewUrl}`;
+        setPasteReminderUrl(viewUrl);
+        setPasteReminderClipboard(clipboardText);
+        // Now copy
+        const { copyToClipboard } = await import('./utils/storage');
+        const ok = await copyToClipboard(clipboardText);
+        if (ok) {
+          showToast('Copied! Paste in Discord.');
+          setHasEverCopied(true);
+          if (!onboarded) finishOnboarding();
+        } else {
+          showToast('Could not copy to clipboard');
+        }
+      } catch (e) {
+        console.error('[reminder] copy with mint failed:', e);
+        showToast('Could not generate link');
+      }
+      return;
+    }
+    
+    // Tokens ready - copy immediately
     try {
       const { copyToClipboard } = await import('./utils/storage');
-      const ok = await copyToClipboard(pasteReminderClipboard);
+      const ok = await copyToClipboard(pasteReminderClipboard!);
       if (ok) {
         const toastMsg = hasEverCopied ? 'Copied again. Paste in Discord.' : 'Copied! Paste in Discord.';
         showToast(toastMsg);
         setHasEverCopied(true);
-        // Copying from strip finishes onboarding (user shared with alliance)
         if (!onboarded) {
           finishOnboarding();
         }
@@ -136,20 +160,38 @@ export default function App() {
   };
 
   const shareFromReminder = async () => {
-    if (!pasteReminderUrl || !currentPlan) return;
+    if (!currentPlan) return;
     if (typeof navigator === 'undefined' || !('share' in navigator)) {
       // Fallback to copy
       copyFromReminder();
       return;
     }
+    
+    // If tokens aren't ready yet, finish minting first
+    let url = pasteReminderUrl;
+    if (!url) {
+      try {
+        const { getOrCreateShareTokens, getExistingShareTokens } = await import('./utils/cloudStorage');
+        const tokens = await getExistingShareTokens(currentPlan.id) || await getOrCreateShareTokens(currentPlan.id);
+        const baseUrl = window.location.origin + window.location.pathname;
+        url = `${baseUrl}?view=${tokens.view_token}`;
+        const clipboardText = `War plan: ${currentPlan.name} — tap to see HQ positions\n${url}`;
+        setPasteReminderUrl(url);
+        setPasteReminderClipboard(clipboardText);
+      } catch (e) {
+        console.error('[reminder] share with mint failed:', e);
+        showToast('Could not generate link');
+        return;
+      }
+    }
+    
     try {
       await navigator.share({
         title: currentPlan.name,
         text: `War plan: ${currentPlan.name} — tap to see HQ positions`,
-        url: pasteReminderUrl,
+        url,
       });
       showToast('Sent!');
-      // Sending from strip finishes onboarding (user shared with alliance)
       if (!onboarded) {
         finishOnboarding();
       }
@@ -167,7 +209,6 @@ export default function App() {
     console.log('[hive-first] Retrying token mint...');
     // Reset all error state to trigger the effect again
     setPasteReminderError(false);
-    setPasteReminderMinting(true);
     mintStartedRef.current = false;
   };
 
@@ -308,23 +349,18 @@ export default function App() {
     trackEvent(Events.ONBOARDING_CHOICE, { choice: 'template', source: 'auto' });
   }, [currentPlan, onboarded, handleApplyTemplate]);
 
-  // Hive-first onboarding: show strip as soon as hive appears, mint token in background.
-  // Show strip immediately when first-run hive is on screen (5+ buildings), even before
-  // view token exists. While minting: "Getting your alliance link...". When ready: enable CTA.
+  // Hive-first onboarding: mint tokens in background, strip shows ready-state Copy immediately.
+  // First paint shows "Alliance war plan — copy for Discord" (not "getting link...").
+  // If user clicks Copy before tokens ready, the handler finishes minting then copies.
   useEffect(() => {
     if (onboarded || isViewOnly || joinedViaShareLink) return;
     if (!currentPlan || currentPlan.buildings.length < 5) return;
     if (pasteReminderUrl) return; // already have a URL
 
-    // Show strip immediately (minting state)
-    if (!pasteReminderMinting && !pasteReminderError) {
-      setPasteReminderMinting(true);
-    }
-
     // Guard to prevent multiple simultaneous mint attempts
     if (mintStartedRef.current) return;
 
-    const mintAndShowStrip = async () => {
+    const mintInBackground = async () => {
       try {
         mintStartedRef.current = true;
         
@@ -341,7 +377,6 @@ export default function App() {
           const clipboardText = `War plan: ${currentPlan.name} — tap to see HQ positions\n${viewUrl}`;
           setPasteReminderUrl(viewUrl);
           setPasteReminderClipboard(clipboardText);
-          setPasteReminderMinting(false);
           setPasteReminderError(false);
           return;
         }
@@ -361,20 +396,18 @@ export default function App() {
         const clipboardText = `War plan: ${currentPlan.name} — tap to see HQ positions\n${viewUrl}`;
         setPasteReminderUrl(viewUrl);
         setPasteReminderClipboard(clipboardText);
-        setPasteReminderMinting(false);
         setPasteReminderError(false);
         console.log('[hive-first] Token mint successful');
       } catch (e) {
         console.error('[hive-first] token mint failed:', e);
         // Reset mint guard so user can retry
         mintStartedRef.current = false;
-        setPasteReminderMinting(false);
         setPasteReminderError(true);
       }
     };
 
-    mintAndShowStrip();
-  }, [currentPlan, onboarded, isViewOnly, joinedViaShareLink, pasteReminderUrl, pasteReminderMinting, pasteReminderError, bootstrapComplete]);
+    mintInBackground();
+  }, [currentPlan, onboarded, isViewOnly, joinedViaShareLink, pasteReminderUrl, pasteReminderError, bootstrapComplete]);
 
   // Pre-select HQ when on a blank grid, so mobile users can tap once to place
   // instead of opening drawer → picking HQ → tapping grid (three steps).
@@ -467,7 +500,7 @@ export default function App() {
       />
 
       {/* Paste Reminder Strip - shown as soon as first-run hive appears */}
-      {!isViewOnly && (pasteReminderUrl || pasteReminderMinting || pasteReminderError) && (
+      {!isViewOnly && !onboarded && currentPlan && currentPlan.buildings.length >= 5 && (
         <div className="paste-reminder">
           <div className="paste-reminder-content">
             <div className="paste-reminder-info">
@@ -476,15 +509,10 @@ export default function App() {
                   <strong>Couldn't get link</strong>
                   <span className="paste-reminder-hint">Tap Retry to try again</span>
                 </>
-              ) : pasteReminderMinting ? (
-                <>
-                  <strong>Alliance war plan — getting link…</strong>
-                  <span className="paste-reminder-hint">Copy this hive for Discord</span>
-                </>
               ) : (
                 <>
                   <strong>Alliance war plan — copy for Discord</strong>
-                  <span className="paste-reminder-url">{pasteReminderUrl}</span>
+                  <span className="paste-reminder-url">{pasteReminderUrl || 'Tap Copy to generate link'}</span>
                 </>
               )}
             </div>
@@ -500,7 +528,6 @@ export default function App() {
                 <button 
                   className="paste-reminder-primary" 
                   onClick={shareFromReminder}
-                  disabled={pasteReminderMinting}
                 >
                   📤 Send to Discord
                 </button>
@@ -508,7 +535,6 @@ export default function App() {
                 <button 
                   className="paste-reminder-primary" 
                   onClick={copyFromReminder}
-                  disabled={pasteReminderMinting}
                 >
                   📋 Copy alliance link
                 </button>
@@ -526,7 +552,7 @@ export default function App() {
       )}
 
       {/* Main Grid Area */}
-      <main className={`grid-area ${pasteReminderUrl || pasteReminderMinting || pasteReminderError ? 'with-reminder' : ''}`}>
+      <main className={`grid-area ${!isViewOnly && !onboarded && currentPlan.buildings.length >= 5 ? 'with-reminder' : ''}`}>
         <HiveGrid
           buildings={currentPlan.buildings}
           gridWidth={currentPlan.gridWidth}
