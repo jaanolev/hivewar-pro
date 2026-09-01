@@ -9,6 +9,7 @@ import PropertyPanel from './components/Panel/PropertyPanel';
 import CanvasHints from './components/CanvasHints/CanvasHints';
 import WhatsNewModal from './components/Modals/WhatsNewModal';
 import OnboardingModal from './components/Modals/OnboardingModal';
+import FirstRunHero from './components/FirstRunHero/FirstRunHero';
 import { HIVE_TEMPLATES } from './data/templates';
 import LockIndicator from './components/Toolbar/LockIndicator';
 import { getProStatus } from './utils/pro';
@@ -95,6 +96,7 @@ export default function App() {
   const [pasteReminderError, setPasteReminderError] = useState(false);
   const [hasEverCopied, setHasEverCopied] = useState(false);
   const mintStartedRef = useRef(false);
+  const [showFirstRunHero, setShowFirstRunHero] = useState(false);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -181,6 +183,7 @@ export default function App() {
     localStorage.setItem(WHATS_NEW_KEY, '1'); // new users don't need the "what's new" recap
     setOnboarded(true);
     setShowWhatsNew(false);
+    setShowFirstRunHero(false);
   };
   
   // Pro status - read from localStorage
@@ -308,6 +311,16 @@ export default function App() {
     trackEvent(Events.ONBOARDING_CHOICE, { choice: 'template', source: 'auto' });
   }, [currentPlan, onboarded, handleApplyTemplate]);
 
+  // Show first-run hero when Diamond Defense is loaded
+  useEffect(() => {
+    if (onboarded || isViewOnly || joinedViaShareLink) return;
+    if (!currentPlan || currentPlan.buildings.length < 5) return;
+    if (showFirstRunHero) return; // already showing
+    
+    // Show hero immediately when hive is ready
+    setShowFirstRunHero(true);
+  }, [currentPlan, onboarded, isViewOnly, joinedViaShareLink, showFirstRunHero]);
+
   // Hive-first onboarding: show strip as soon as hive appears, mint token in background.
   // Show strip immediately when first-run hive is on screen (5+ buildings), even before
   // view token exists. While minting: "Getting your alliance link...". When ready: enable CTA.
@@ -425,8 +438,78 @@ export default function App() {
 
   const showOnboarding = false; // Modal disabled for hive-first onboarding (PR #27)
 
+  const handleFirstRunShare = async () => {
+    if (!currentPlan) return;
+    
+    try {
+      const { getOrCreateShareTokens, getExistingShareTokens } = await import('./utils/cloudStorage');
+      const { copyToClipboard } = await import('./utils/storage');
+      
+      // Try existing tokens first (fast path)
+      let tokens = await getExistingShareTokens(currentPlan.id);
+      
+      // If no existing tokens, mint new ones
+      if (!tokens) {
+        if (!bootstrapComplete) {
+          showToast('Preparing your link...');
+          // Wait a moment for bootstrap to complete
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        tokens = await getOrCreateShareTokens(currentPlan.id);
+      }
+      
+      const baseUrl = window.location.origin + window.location.pathname;
+      const viewUrl = `${baseUrl}?view=${tokens.view_token}`;
+      const clipboardText = `War plan: ${currentPlan.name} — tap to see HQ positions\n${viewUrl}`;
+      
+      // Try native share first if available
+      if (typeof navigator !== 'undefined' && 'share' in navigator) {
+        try {
+          await navigator.share({
+            title: currentPlan.name,
+            text: `War plan: ${currentPlan.name} — tap to see HQ positions`,
+            url: viewUrl,
+          });
+          showToast('Sent!');
+          finishOnboarding();
+          trackEvent(Events.COLLAB_LINK_COPIED, { type: 'view', source: 'first_run_hero' });
+          return;
+        } catch (shareError: any) {
+          if (shareError.name !== 'AbortError') {
+            console.error('[hero] navigator.share failed:', shareError);
+          }
+        }
+      }
+      
+      // Fallback to clipboard copy
+      const ok = await copyToClipboard(clipboardText);
+      if (ok) {
+        showToast('Copied! Paste in Discord.');
+        setHasEverCopied(true);
+        trackEvent(Events.COLLAB_LINK_COPIED, { type: 'view', source: 'first_run_hero' });
+      } else {
+        showToast('Could not copy to clipboard');
+      }
+      
+      finishOnboarding();
+    } catch (e) {
+      console.error('[hero] share failed:', e);
+      showToast('⚠️ Could not generate link');
+    }
+  };
+
   return (
     <div className="app">
+      {/* First Run Hero - shown before paste reminder for cold first-run */}
+      {showFirstRunHero && currentPlan && (
+        <FirstRunHero
+          planName={currentPlan.name}
+          buildingCount={currentPlan.buildings.length}
+          onShare={handleFirstRunShare}
+          onDismiss={finishOnboarding}
+        />
+      )}
+
       <LockIndicator
         hasEditLock={hasEditLock}
         otherUserHoldsLock={otherUserHoldsLock}
@@ -466,8 +549,8 @@ export default function App() {
         onboarded={onboarded}
       />
 
-      {/* Paste Reminder Strip - shown as soon as first-run hive appears */}
-      {!isViewOnly && (pasteReminderUrl || pasteReminderMinting || pasteReminderError) && (
+      {/* Paste Reminder Strip - shown after first-run hero is dismissed */}
+      {!isViewOnly && !showFirstRunHero && (pasteReminderUrl || pasteReminderMinting || pasteReminderError) && (
         <div className="paste-reminder">
           <div className="paste-reminder-content">
             <div className="paste-reminder-info">
