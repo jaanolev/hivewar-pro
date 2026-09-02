@@ -97,6 +97,13 @@ export default function MenuModal({
         </div>
 
         <div className="modal-body">
+          {/* First-run tip: guide users to copy alliance link */}
+          {editorControls.onboarded === false && (
+            <div className="menu-first-run-tip">
+              💡 Copy the alliance link for Discord first
+            </div>
+          )}
+
           {/* Mobile-only: editor controls that don't fit in the slim
               phone toolbar (hidden on desktop via CSS). */}
           <div className="menu-editor-controls">
@@ -199,45 +206,51 @@ export default function MenuModal({
             ))}
           </div>
 
-          {/* New plan form */}
-          {showNewForm ? (
-            <div className="new-plan-form">
-              <input
-                type="text"
-                placeholder="Plan name..."
-                value={newPlanName}
-                onChange={e => setNewPlanName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleCreate()}
-                autoFocus
-              />
-              <button className="create-btn" onClick={handleCreate}>Create</button>
-              <button className="cancel-btn" onClick={() => setShowNewForm(false)}>Cancel</button>
-            </div>
-          ) : (
-            <button 
-              className="new-plan-btn"
-              onClick={() => setShowNewForm(true)}
-            >
-              ➕ New Hive Plan
-            </button>
+          {/* New plan form - hidden during first-run */}
+          {editorControls.onboarded !== false && (
+            <>
+              {showNewForm ? (
+                <div className="new-plan-form">
+                  <input
+                    type="text"
+                    placeholder="Plan name..."
+                    value={newPlanName}
+                    onChange={e => setNewPlanName(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleCreate()}
+                    autoFocus
+                  />
+                  <button className="create-btn" onClick={handleCreate}>Create</button>
+                  <button className="cancel-btn" onClick={() => setShowNewForm(false)}>Cancel</button>
+                </div>
+              ) : (
+                <button 
+                  className="new-plan-btn"
+                  onClick={() => setShowNewForm(true)}
+                >
+                  ➕ New Hive Plan
+                </button>
+              )}
+            </>
           )}
 
-          {/* Import */}
-          <div className="import-section">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json"
-              onChange={handleImport}
-              style={{ display: 'none' }}
-            />
-            <button 
-              className="import-btn"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              📁 Import JSON
-            </button>
-          </div>
+          {/* Import - hidden during first-run */}
+          {editorControls.onboarded !== false && (
+            <div className="import-section">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                onChange={handleImport}
+                style={{ display: 'none' }}
+              />
+              <button 
+                className="import-btn"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                📁 Import JSON
+              </button>
+            </div>
+          )}
 
           {/* App info */}
           <div className="app-info">

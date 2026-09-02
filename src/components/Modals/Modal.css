@@ -206,6 +206,17 @@
   max-width: 400px;
 }
 
+.menu-first-run-tip {
+  padding: 12px 14px;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 10px;
+  color: #fbbf24;
+  font-size: 13px;
+  margin-bottom: 18px;
+  text-align: center;
+}
+
 .current-plan-section {
   background: rgba(102, 126, 234, 0.1);
   border: 1px solid rgba(102, 126, 234, 0.2);
