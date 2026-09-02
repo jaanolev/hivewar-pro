@@ -153,6 +153,10 @@ export const Events = {
 
   // Account / registration
   SIGN_UP: 'sign_up',
+
+  // Clipboard / Copy failures
+  CLIPBOARD_FALLBACK_USED: 'clipboard_fallback_used',
+  CLIPBOARD_ALL_METHODS_FAILED: 'clipboard_all_methods_failed',
 };
 
 // Generate daily report

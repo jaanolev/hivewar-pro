@@ -13,6 +13,7 @@ import { HIVE_TEMPLATES } from './data/templates';
 import LockIndicator from './components/Toolbar/LockIndicator';
 import { getProStatus } from './utils/pro';
 import { trackSessionStart, trackEvent, Events } from './utils/analytics';
+import { playConfirmSound } from './utils/audio';
 import './App.css';
 
 // Modals that only render on user interaction — load on demand so the
@@ -93,6 +94,7 @@ export default function App() {
   const [pasteReminderClipboard, setPasteReminderClipboard] = useState<string | null>(null);
   const [pasteReminderError, setPasteReminderError] = useState(false);
   const [hasEverCopied, setHasEverCopied] = useState(false);
+  const [showFallbackUrl, setShowFallbackUrl] = useState(false);
   const mintStartedRef = useRef(false);
 
   const showToast = (msg: string) => {
@@ -104,6 +106,7 @@ export default function App() {
     setPasteReminderUrl(null);
     setPasteReminderClipboard(null);
     setPasteReminderError(false);
+    setShowFallbackUrl(false);
     mintStartedRef.current = false;
     // Dismissing the strip finishes onboarding (user chose a clean hive)
     if (!onboarded) {
@@ -126,11 +129,14 @@ export default function App() {
         const { copyToClipboard } = await import('./utils/storage');
         const ok = await copyToClipboard(clipboardText);
         if (ok) {
+          playConfirmSound();
           showToast('Copied! Paste in Discord.');
           setHasEverCopied(true);
+          setShowFallbackUrl(false);
           if (!onboarded) finishOnboarding();
         } else {
-          showToast('Could not copy to clipboard');
+          showToast('Tap and hold link to copy');
+          setShowFallbackUrl(true);
         }
       } catch (e) {
         console.error('[reminder] copy with mint failed:', e);
@@ -144,18 +150,22 @@ export default function App() {
       const { copyToClipboard } = await import('./utils/storage');
       const ok = await copyToClipboard(pasteReminderClipboard!);
       if (ok) {
+        playConfirmSound();
         const toastMsg = hasEverCopied ? 'Copied again. Paste in Discord.' : 'Copied! Paste in Discord.';
         showToast(toastMsg);
         setHasEverCopied(true);
+        setShowFallbackUrl(false);
         if (!onboarded) {
           finishOnboarding();
         }
       } else {
-        showToast('Could not copy to clipboard');
+        showToast('Tap and hold link to copy');
+        setShowFallbackUrl(true);
       }
     } catch (e) {
       console.error('[reminder] copy failed:', e);
-      showToast('Could not copy to clipboard');
+      showToast('Tap and hold link to copy');
+      setShowFallbackUrl(true);
     }
   };
 
@@ -192,6 +202,7 @@ export default function App() {
         url,
       });
       showToast('Sent!');
+      setShowFallbackUrl(false);
       if (!onboarded) {
         finishOnboarding();
       }
@@ -200,7 +211,24 @@ export default function App() {
         console.log('[reminder] navigator.share cancelled by user');
       } else {
         console.error('[reminder] navigator.share failed:', shareError);
-        showToast('Share failed — link is still copied');
+        // Try to copy as fallback when share fails
+        try {
+          const { copyToClipboard } = await import('./utils/storage');
+          const clipboardText = `War plan: ${currentPlan.name} — tap to see HQ positions\n${url}`;
+          const ok = await copyToClipboard(clipboardText);
+          if (ok) {
+            playConfirmSound();
+            showToast('Share failed, but link copied');
+            setShowFallbackUrl(false);
+          } else {
+            showToast('Tap and hold link to copy');
+            setShowFallbackUrl(true);
+          }
+        } catch (copyError) {
+          console.error('[reminder] copy fallback failed:', copyError);
+          showToast('Tap and hold link to copy');
+          setShowFallbackUrl(true);
+        }
       }
     }
   };
@@ -508,6 +536,17 @@ export default function App() {
                 <>
                   <strong>Couldn't get link</strong>
                   <span className="paste-reminder-hint">Tap Retry to try again</span>
+                </>
+              ) : showFallbackUrl && pasteReminderUrl ? (
+                <>
+                  <strong>Tap and hold to copy link</strong>
+                  <input 
+                    type="text" 
+                    readOnly 
+                    value={pasteReminderUrl}
+                    className="paste-reminder-url-input"
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
                 </>
               ) : (
                 <>
