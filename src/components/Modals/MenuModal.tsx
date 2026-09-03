@@ -159,8 +159,11 @@ export default function MenuModal({
                     <button onClick={() => setEditingName(false)}>✕</button>
                   </div>
                 ) : (
-                  <h3 onClick={() => { setEditingName(true); setTempName(currentPlan.name); }}>
-                    {currentPlan.name} ✏️
+                  <h3 
+                    onClick={editorControls.onboarded !== false ? () => { setEditingName(true); setTempName(currentPlan.name); } : undefined}
+                    style={editorControls.onboarded === false ? { cursor: 'default' } : undefined}
+                  >
+                    {currentPlan.name} {editorControls.onboarded !== false && '✏️'}
                   </h3>
                 )}
               </div>
@@ -186,7 +189,7 @@ export default function MenuModal({
                   <span className="plan-name">{plan.name}</span>
                   <span className="plan-buildings">{plan.buildings.length} 🏗️</span>
                 </div>
-                {plans.length > 1 && (
+                {plans.length > 1 && editorControls.onboarded !== false && (
                   <button 
                     className="plan-delete"
                     onClick={(e) => { e.stopPropagation(); onDeletePlan(plan.id); }}
