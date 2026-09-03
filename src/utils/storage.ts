@@ -86,15 +86,86 @@ export function downloadFile(content: string, filename: string, type: string = '
   URL.revokeObjectURL(url);
 }
 
-// Copy to clipboard
+// Copy to clipboard with robust fallbacks for mobile/in-app browsers
 export async function copyToClipboard(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch (error) {
-    console.error('Failed to copy:', error);
-    return false;
+  // Method 1: Modern Clipboard API (preferred, but fails in many mobile/in-app browsers)
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      console.log('[clipboard] Modern API succeeded');
+      return true;
+    } catch (error) {
+      console.warn('[clipboard] Modern API failed, trying fallback:', error);
+      // Track that we need to use fallback (indicates browser/context issue)
+      try {
+        const { trackEvent, Events } = await import('./analytics');
+        trackEvent(Events.CLIPBOARD_FALLBACK_USED, { 
+          method: 'modern_api_failed',
+          userAgent: navigator.userAgent.substring(0, 100)
+        });
+      } catch (e) {
+        // Analytics import failed, continue without tracking
+      }
+    }
   }
+
+  // Method 2: Legacy execCommand fallback (works in more contexts, including insecure contexts)
+  try {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    
+    // Make the textarea invisible but still part of the document
+    textArea.style.position = 'fixed';
+    textArea.style.top = '0';
+    textArea.style.left = '0';
+    textArea.style.width = '2em';
+    textArea.style.height = '2em';
+    textArea.style.padding = '0';
+    textArea.style.border = 'none';
+    textArea.style.outline = 'none';
+    textArea.style.boxShadow = 'none';
+    textArea.style.background = 'transparent';
+    textArea.style.opacity = '0';
+    textArea.style.pointerEvents = 'none';
+    
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    // For iOS Safari: setSelectionRange helps ensure selection works
+    try {
+      textArea.setSelectionRange(0, text.length);
+    } catch (e) {
+      // Some browsers don't support setSelectionRange
+    }
+    
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textArea);
+    
+    if (successful) {
+      console.log('[clipboard] execCommand fallback succeeded');
+      return true;
+    } else {
+      console.warn('[clipboard] execCommand returned false');
+    }
+  } catch (error) {
+    console.error('[clipboard] execCommand fallback failed:', error);
+  }
+
+  // All methods failed - track for monitoring
+  try {
+    const { trackEvent, Events } = await import('./analytics');
+    trackEvent(Events.CLIPBOARD_ALL_METHODS_FAILED, { 
+      userAgent: navigator.userAgent.substring(0, 100),
+      isSecureContext: window.isSecureContext,
+      hasClipboard: !!navigator.clipboard
+    });
+  } catch (e) {
+    // Analytics import failed, continue without tracking
+  }
+
+  console.error('[clipboard] All copy methods failed');
+  return false;
 }
 
 // CSV Export for coordinates
